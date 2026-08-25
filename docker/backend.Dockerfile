@@ -67,7 +67,7 @@ RUN npm run build -w shared \
 # ---- runtime ----
 FROM base AS runtime
 ENV NODE_ENV=production
-COPY --from=deps /app/node_modules ./node_modules
+COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/shared ./shared
 COPY --from=build /app/backend ./backend
 COPY package.json ./
