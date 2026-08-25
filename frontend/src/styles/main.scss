@@ -1,0 +1,11 @@
+// ---------------------------------------------------------------------------
+// Bootstrap is themed through SCSS variables, never overridden with !important.
+// Import order matters: functions → our tokens → Bootstrap → our components.
+// ---------------------------------------------------------------------------
+
+@import "bootstrap/scss/functions";
+@import "variables";
+@import "bootstrap/scss/bootstrap";
+
+@import "base";
+@import "shell";

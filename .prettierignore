@@ -1,0 +1,10 @@
+node_modules
+dist
+build
+coverage
+var
+*.tsbuildinfo
+package-lock.json
+backend/prisma/migrations
+docs
+Internal Invoice & Quotation Management System — Product Requirements Document.md

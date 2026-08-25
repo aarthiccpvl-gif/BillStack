@@ -1,0 +1,39 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+build/
+*.tsbuildinfo
+
+# environment — never commit real secrets
+.env
+.env.*
+!.env.example
+
+# local storage (uploads, generated PDFs)
+var/
+storage/
+
+# logs
+logs/
+*.log
+npm-debug.log*
+
+# test / coverage
+coverage/
+.vitest/
+test-results/
+playwright-report/
+
+# prisma
+backend/prisma/*.db
+
+# editors / OS
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
