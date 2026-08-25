@@ -15,7 +15,7 @@ const PHASES: { phase: number; title: string; done: boolean }[] = [
   { phase: 2, title: 'Database schema, authentication, roles and permissions, audit', done: true },
   { phase: 3, title: 'Company settings, master data, customers, products & services', done: true },
   { phase: 4, title: 'Template engine, three templates, PDF rendering', done: true },
-  { phase: 5, title: 'Quotations: editor, calculations, PDF, send, revisions', done: false },
+  { phase: 5, title: 'Quotations: editor, calculations, PDF, share links, revisions', done: true },
   { phase: 6, title: 'Invoices and quotation → invoice conversion', done: false },
   { phase: 7, title: 'Dashboard, Finance Viewer surface, bulk downloads', done: false },
   { phase: 8, title: 'Reports, CSV/XLSX/PDF exports, audit log viewer', done: false },

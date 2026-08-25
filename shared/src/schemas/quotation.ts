@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { optionalId, optionalText } from './common';
 import { decimalString, hsnSacSchema } from './item';
 
 /**
@@ -10,15 +11,6 @@ import { decimalString, hsnSacSchema } from './item';
  * server derives every one of them.
  */
 
-const optionalText = (max: number) =>
-  z
-    .string()
-    .trim()
-    .max(max)
-    .optional()
-    .or(z.literal(''))
-    .transform((value) => (value === '' ? null : (value ?? null)));
-
 const dateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use a valid date');
 
 export const DISCOUNT_MODES = ['NONE', 'PERCENT', 'AMOUNT'] as const;
@@ -27,7 +19,7 @@ export type DiscountModeInput = (typeof DISCOUNT_MODES)[number];
 export const documentLineSchema = z
   .object({
     /** Set when the line came from the item master; null for an ad-hoc line. */
-    itemId: z.coerce.number().int().positive().nullable().optional(),
+    itemId: optionalId,
     name: z.string().trim().min(1, 'A description is required').max(200),
     description: optionalText(2000),
     hsnSacCode: hsnSacSchema,
@@ -40,14 +32,14 @@ export const documentLineSchema = z
     discountMode: z.enum(DISCOUNT_MODES).default('NONE'),
     discountValue: decimalString(4, 'Discount').default('0'),
     /** One selection that expands into its component rates on the server. */
-    taxGroupId: z.coerce.number().int().positive().nullable().optional(),
+    taxGroupId: optionalId,
     isTaxExempt: z.boolean().default(false),
     exemptReason: optionalText(120),
   })
-  .refine(
-    (line) => line.discountMode !== 'PERCENT' || Number(line.discountValue) <= 100,
-    { path: ['discountValue'], message: 'A percentage discount cannot exceed 100%' },
-  );
+  .refine((line) => line.discountMode !== 'PERCENT' || Number(line.discountValue) <= 100, {
+    path: ['discountValue'],
+    message: 'A percentage discount cannot exceed 100%',
+  });
 
 export type DocumentLineInput = z.infer<typeof documentLineSchema>;
 
@@ -62,11 +54,11 @@ const documentBase = {
   exchangeRateToBase: decimalString(8, 'Exchange rate').default('1'),
 
   placeOfSupplyStateCode: optionalText(4),
-  billingAddressId: z.coerce.number().int().positive().nullable().optional(),
-  shippingAddressId: z.coerce.number().int().positive().nullable().optional(),
+  billingAddressId: optionalId,
+  shippingAddressId: optionalId,
 
-  templateId: z.coerce.number().int().positive().nullable().optional(),
-  bankAccountId: z.coerce.number().int().positive().nullable().optional(),
+  templateId: optionalId,
+  bankAccountId: optionalId,
   showBankDetails: z.boolean().default(true),
 
   discountMode: z.enum(DISCOUNT_MODES).default('NONE'),
@@ -95,10 +87,10 @@ export const createQuotationSchema = z
     ...documentBase,
     expiryDate: dateOnly.nullable().optional(),
   })
-  .refine(
-    (data) => !data.expiryDate || data.expiryDate >= data.documentDate,
-    { path: ['expiryDate'], message: 'The expiry date cannot be before the quotation date' },
-  );
+  .refine((data) => !data.expiryDate || data.expiryDate >= data.documentDate, {
+    path: ['expiryDate'],
+    message: 'The expiry date cannot be before the quotation date',
+  });
 
 export type CreateQuotationInput = z.infer<typeof createQuotationSchema>;
 
@@ -108,9 +100,12 @@ export type CreateQuotationInput = z.infer<typeof createQuotationSchema>;
  * `changeReason` is required once the document has left DRAFT — the API rejects
  * an edit to an issued document without one.
  */
-export const updateQuotationSchema = createQuotationSchema.innerType().partial().extend({
-  changeReason: z.string().trim().max(500).optional(),
-});
+export const updateQuotationSchema = createQuotationSchema
+  .innerType()
+  .partial()
+  .extend({
+    changeReason: z.string().trim().max(500).optional(),
+  });
 
 export type UpdateQuotationInput = z.infer<typeof updateQuotationSchema>;
 

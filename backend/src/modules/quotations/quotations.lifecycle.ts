@@ -91,10 +91,7 @@ export const changeStatus = async (
  * Copies the content, not the identity: the copy is a fresh draft with its own
  * number, today's date, and none of the original's history.
  */
-export const duplicateQuotation = async (
-  id: bigint,
-  actorId: number,
-): Promise<QuotationRecord> => {
+export const duplicateQuotation = async (id: bigint, actorId: number): Promise<QuotationRecord> => {
   const source = await findQuotation(id);
   const { createQuotation } = await import('./quotations.service');
 

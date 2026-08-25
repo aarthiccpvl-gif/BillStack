@@ -41,7 +41,7 @@ const ACTION_LABELS: Partial<Record<QuotationStatus, string>> = {
   ACCEPTED: 'Mark as accepted',
   DECLINED: 'Mark as declined',
   EXPIRED: 'Mark as expired',
-  CANCELLED: 'Cancel',
+  CANCELLED: 'Cancel quotation',
 };
 
 const Detail = ({ label, value }: { label: string; value: React.ReactNode }) => (
@@ -144,8 +144,7 @@ export const QuotationDetailPage = () => {
   const canDelete = hasPermission(PERMISSIONS.QUOTATION_DELETE);
   const canDownload = hasPermission(PERMISSIONS.QUOTATION_DOWNLOAD);
 
-  const locked =
-    quotation?.status === 'CONVERTED' || quotation?.status === 'CANCELLED';
+  const locked = quotation?.status === 'CONVERTED' || quotation?.status === 'CANCELLED';
   const actions = quotation ? quotationActions(quotation.status) : [];
 
   return (
@@ -325,9 +324,14 @@ export const QuotationDetailPage = () => {
                   />
                   <Detail label="GSTIN" value={quotation.customerSnapshot.gstin} />
                   <Detail label="Place of supply" value={quotation.placeOfSupplyStateCode} />
+                  <Detail label="Template" value={quotation.templateName} />
                   <Detail
-                    label="Template"
-                    value={`${quotation.templateName} · v${quotation.currentVersion}`}
+                    label="Document version"
+                    value={
+                      quotation.currentVersion > 1
+                        ? `Version ${quotation.currentVersion}`
+                        : 'Version 1 — never revised'
+                    }
                   />
                   <Detail label="Created by" value={quotation.createdByName} />
 

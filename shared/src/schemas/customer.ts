@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { optionalEmail, optionalText } from './common';
 import { gstinSchema, panSchema } from './company';
 
 /**
@@ -8,15 +9,6 @@ import { gstinSchema, panSchema } from './company';
  * optional, and when omitted the backend allocates it from the same numbering
  * mechanism documents use — the client never invents an identifier.
  */
-
-const optionalText = (max: number) =>
-  z
-    .string()
-    .trim()
-    .max(max)
-    .optional()
-    .or(z.literal(''))
-    .transform((value) => (value === '' ? null : (value ?? null)));
 
 export const TAX_TREATMENTS = [
   'REGISTERED',
@@ -56,14 +48,7 @@ export type CustomerAddressInput = z.infer<typeof customerAddressSchema>;
 export const customerContactSchema = z.object({
   name: z.string().trim().min(2, 'Contact name is required').max(150),
   designation: optionalText(100),
-  email: z
-    .string()
-    .trim()
-    .email('Enter a valid email address')
-    .max(190)
-    .optional()
-    .or(z.literal(''))
-    .transform((value) => (value === '' ? null : (value ?? null))),
+  email: optionalEmail,
   phone: optionalText(40),
   isPrimary: z.boolean().default(false),
 });
@@ -77,14 +62,7 @@ export const createCustomerSchema = z
     name: z.string().trim().min(2, 'Customer name is required').max(200),
     companyName: optionalText(200),
     contactPerson: optionalText(150),
-    email: z
-      .string()
-      .trim()
-      .email('Enter a valid email address')
-      .max(190)
-      .optional()
-      .or(z.literal(''))
-      .transform((value) => (value === '' ? null : (value ?? null))),
+    email: optionalEmail,
     phone: optionalText(40),
     altPhone: optionalText(40),
     gstin: gstinSchema

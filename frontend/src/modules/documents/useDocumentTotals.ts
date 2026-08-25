@@ -47,7 +47,8 @@ const toComponents = (
 
 /** Anything the engine would choke on is skipped rather than throwing mid-keystroke. */
 const isUsable = (line: DocumentLineInput): boolean =>
-  /^\d+(\.\d+)?$/.test(String(line.quantity ?? '')) && /^\d+(\.\d+)?$/.test(String(line.rate ?? ''));
+  /^\d+(\.\d+)?$/.test(String(line.quantity ?? '')) &&
+  /^\d+(\.\d+)?$/.test(String(line.rate ?? ''));
 
 export const useDocumentTotals = ({
   items,

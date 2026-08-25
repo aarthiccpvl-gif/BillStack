@@ -3,6 +3,7 @@ import { createCustomerSchema } from './customer';
 import { createItemSchema, decimalString, hsnSacSchema } from './item';
 import { gstinSchema, panSchema, updateCompanySchema } from './company';
 import { numberingSeriesSchema } from './masters';
+import { createQuotationSchema } from './quotation';
 
 const validCustomer = {
   name: 'ABC Technologies',
@@ -160,5 +161,78 @@ describe('company settings', () => {
   it('accepts a partial update — the settings screen saves one tab at a time', () => {
     const result = updateCompanySchema.safeParse({ city: 'Bengaluru' });
     expect(result.success).toBe(true);
+  });
+});
+
+describe('reading a record and sending it straight back', () => {
+  /**
+   * The API returns null for an empty optional field. Every edit form loads a
+   * record and submits it again, so a schema that only tolerates `undefined`
+   * rejects the application's own data — which is exactly what happened to the
+   * quotation editor before `optionalText` learned to accept null.
+   */
+  it('accepts null for every optional text field on a quotation', () => {
+    const result = createQuotationSchema.safeParse({
+      customerId: 9,
+      documentDate: '2026-08-25',
+      expiryDate: null,
+      referenceNumber: null,
+      subject: null,
+      currencyCode: 'INR',
+      exchangeRateToBase: '1.00000000',
+      placeOfSupplyStateCode: null,
+      billingAddressId: null,
+      shippingAddressId: null,
+      templateId: null,
+      bankAccountId: null,
+      showBankDetails: true,
+      discountMode: 'NONE',
+      discountValue: '0.0000',
+      adjustment: '0.0000',
+      roundOffEnabled: true,
+      notes: null,
+      terms: null,
+      customerMessage: null,
+      paymentInstructions: null,
+      customFields: [],
+      items: [
+        {
+          itemId: null,
+          name: 'Support',
+          description: null,
+          hsnSacCode: null,
+          unitCode: null,
+          quantity: '1.000',
+          rate: '1000.0000',
+          discountMode: 'NONE',
+          discountValue: '0.0000',
+          taxGroupId: null,
+          isTaxExempt: false,
+          exemptReason: null,
+        },
+      ],
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts null for the optional fields of a customer', () => {
+    expect(
+      createCustomerSchema.safeParse({
+        ...validCustomer,
+        companyName: null,
+        email: null,
+        phone: null,
+        notes: null,
+        placeOfSupplyStateCode: null,
+      }).success,
+    ).toBe(true);
+  });
+
+  it('still normalises an empty string to null', () => {
+    expect(hsnSacSchema.parse('')).toBeNull();
+    expect(hsnSacSchema.parse(null)).toBeNull();
+    expect(hsnSacSchema.parse(undefined)).toBeNull();
+    expect(hsnSacSchema.parse('998313')).toBe('998313');
   });
 });

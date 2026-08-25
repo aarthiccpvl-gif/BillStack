@@ -119,7 +119,11 @@ describe('fixture E — mixed rates with a document discount', () => {
     inr({
       lines: [
         { quantity: '2', rate: '15000', taxes: [{ ...IGST18, ratePercent: '18' }] },
-        { quantity: '3', rate: '7000', taxes: [{ ...IGST18, taxRateId: 4, label: 'IGST 12%', ratePercent: '12' }] },
+        {
+          quantity: '3',
+          rate: '7000',
+          taxes: [{ ...IGST18, taxRateId: 4, label: 'IGST 12%', ratePercent: '12' }],
+        },
         { quantity: '1', rate: '4000', taxes: [], isTaxExempt: true },
       ],
       discountMode: 'PERCENT',

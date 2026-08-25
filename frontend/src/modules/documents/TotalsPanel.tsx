@@ -1,4 +1,4 @@
-import { formatMoney, formatPercent, type CalcResult, type CurrencyFormat } from '@app/shared';
+import { formatMoney, formatPercent, sum, type CalcResult, type CurrencyFormat } from '@app/shared';
 
 /**
  * The totals panel.
@@ -25,15 +25,20 @@ interface Props {
   disabled?: boolean;
 }
 
-const Row = ({
-  label,
-  value,
-  strong,
-}: {
-  label: string;
-  value: string;
-  strong?: boolean;
-}) => (
+/**
+ * The two discounts are shown apart on purpose.
+ *
+ * `discountTotal` is the sum of both, so printing it beside the document-discount
+ * box reads as though the 5% you typed produced a figure it did not. A line
+ * discount belongs with the lines; this row belongs to the box beside it.
+ */
+const lineDiscountTotal = (totals: CalcResult) =>
+  sum(totals.lines.map((line) => line.discountAmount));
+
+const documentDiscountTotal = (totals: CalcResult) =>
+  sum(totals.lines.map((line) => line.allocatedDocDiscount));
+
+const Row = ({ label, value, strong }: { label: string; value: string; strong?: boolean }) => (
   <div className={`d-flex justify-content-between py-1${strong ? ' fw-semibold' : ''}`}>
     <span className={strong ? '' : 'text-secondary'}>{label}</span>
     <span className="text-numeric">{value}</span>
@@ -58,6 +63,13 @@ export const TotalsPanel = ({
 
     <div className="card-body">
       <Row label="Subtotal" value={formatMoney(totals.subtotal, currency)} />
+
+      {!lineDiscountTotal(totals).isZero() && (
+        <Row
+          label="Line discounts"
+          value={`− ${formatMoney(lineDiscountTotal(totals), currency)}`}
+        />
+      )}
 
       <div className="d-flex justify-content-between align-items-center py-1 gap-2">
         <div className="d-flex align-items-center gap-2">
@@ -88,8 +100,8 @@ export const TotalsPanel = ({
           </div>
         </div>
         <span className="text-numeric">
-          {Number(totals.discountTotal) > 0 ? '− ' : ''}
-          {formatMoney(totals.discountTotal, currency)}
+          {documentDiscountTotal(totals).isZero() ? '' : '− '}
+          {formatMoney(documentDiscountTotal(totals), currency)}
         </span>
       </div>
 

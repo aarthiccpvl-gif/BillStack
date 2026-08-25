@@ -86,7 +86,12 @@ export interface QuotationRecord {
   roundOffEnabled: boolean;
   grandTotal: string;
   taxSummary: {
-    byComponent: { label: string; ratePercent?: string; taxableAmount: string; taxAmount: string }[];
+    byComponent: {
+      label: string;
+      ratePercent?: string;
+      taxableAmount: string;
+      taxAmount: string;
+    }[];
     amountInWords: string;
   };
 
@@ -156,12 +161,18 @@ export interface DocumentRevisionRecord {
 
 export interface ShareLinkRecord {
   id: string;
-  url: string;
+  /**
+   * The address, which exists only in the response that creates it — the token is
+   * stored as a hash, so a link that already exists can never be shown again.
+   * Null on every subsequent read, and the UI says so rather than showing a blank.
+   */
+  url: string | null;
   expiresAt: string | null;
   revokedAt: string | null;
   viewCount: number;
   lastViewedAt: string | null;
   createdAt: string;
-  /** Pre-built wa.me deep link; no WhatsApp API involved (decision Q14). */
-  whatsappUrl: string;
+  /** Pre-built wa.me deep link; no WhatsApp API involved (decision Q14). Null once
+   *  the address is no longer known. */
+  whatsappUrl: string | null;
 }

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { optionalText } from './common';
 
 /**
  * One schema, two consumers: the login form validates against it in the browser and
@@ -54,7 +55,7 @@ export const createUserSchema = z.object({
   name: z.string().trim().min(2, 'Name is required').max(150),
   email: emailSchema,
   roleId: z.coerce.number().int().positive('Select a role'),
-  phone: z.string().trim().max(30).optional().or(z.literal('')),
+  phone: optionalText(30),
   password: passwordSchema,
 });
 
@@ -63,7 +64,9 @@ export type CreateUserInput = z.infer<typeof createUserSchema>;
 export const updateUserSchema = z.object({
   name: z.string().trim().min(2).max(150).optional(),
   roleId: z.coerce.number().int().positive().optional(),
-  phone: z.string().trim().max(30).optional().or(z.literal('')),
+  /* Optional on top of optionalText: a partial update may omit the key entirely,
+     which is different from sending null to clear the number. */
+  phone: optionalText(30).optional(),
   status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
 });
 

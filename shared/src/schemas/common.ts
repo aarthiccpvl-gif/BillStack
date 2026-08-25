@@ -19,6 +19,41 @@ export const paginationQuerySchema = z.object({
 
 export type PaginationQuery = z.infer<typeof paginationQuerySchema>;
 
+/**
+ * An optional free-text field.
+ *
+ * Accepts a string, an empty string, `undefined` **or `null`**, and always
+ * produces `null` for "nothing". Null matters: the API returns null for an empty
+ * field, so a client that reads a record and sends it straight back — which every
+ * edit form does — must not be told its own data is invalid.
+ */
+export const optionalText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .nullish()
+    .transform((value) => (value === '' || value == null ? null : value));
+
+/** The same tolerance for an optional email address. */
+export const optionalEmail = z
+  .union([z.literal(''), z.string().trim().email('Enter a valid email address').max(190)])
+  .nullish()
+  .transform((value) => (value === '' || value == null ? null : value));
+
+/**
+ * An optional reference to another record.
+ *
+ * A `<select>` with nothing chosen submits an empty string, and `z.coerce.number()`
+ * turns that into 0 — which then fails `.positive()` and tells the user their
+ * blank optional field is invalid. Treating '' as "none" is what the control
+ * actually means.
+ */
+export const optionalId = z
+  .union([z.literal(''), z.coerce.number().int().positive()])
+  .nullish()
+  .transform((value) => (value === '' || value == null ? null : value));
+
 export const idParamSchema = z.object({
   id: z.coerce.number().int().positive(),
 });

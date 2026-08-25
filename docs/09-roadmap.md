@@ -72,19 +72,33 @@ golden snapshots and the PDF assertions (page numbers, repeated headers, logo) p
 
 ---
 
-## Phase 5 — Quotations
+## Phase 5 — Quotations  ✅ complete
 
 **Build:** `CalculationService` (full engine, all fixtures green) and `TaxService` place-of-supply
 resolution; quotation create/update inside one transaction (snapshots, numbering, FY, tax summary);
 list with filters/search/paging; detail page with preview, timeline and actions; the generic
 `DocumentEditor` + items grid + totals + preview pane; status transitions; PDF generate/download;
 secure share link and WhatsApp deep link (**no email — decision Q14**); `RevisionService` + history
-UI; duplicate; convert endpoint (built here, invoice created in Phase 6).
+UI; duplicate.
 
 **Exit criteria:** the whole PRD §15–§19 quotation flow works against a real database; totals match
 the fixtures to the last minor unit; a post-issue edit produces v2 with an intact v1 snapshot and its
 own PDF; WhatsApp share opens a pre-filled `wa.me` link containing the secure document URL (no API
 integration).
+
+**Verified:** 39/39 live checks against the real database (numbering, snapshotting, the §16 worked
+example, ignored client-supplied totals, transition rules, change-reason enforcement, revisions,
+version-1 figures preserved, HTML preview, PDF generation/caching/download, share links including the
+public route and revocation, duplicate, delete rules, round-off persistence) plus a Finance Viewer
+pass showing read allowed and every write refused with 403.
+
+**Changed along the way:** the round-off setting is now stored (`round_off_enabled`) rather than
+inferred from a zero amount; `optionalText` / `optionalEmail` / `optionalId` moved into
+`schemas/common.ts` and accept `null`, so a client can send back exactly what it read; a share link's
+address is `null` after creation instead of an empty string, and the UI says so.
+
+**Deferred:** the quotation → invoice conversion endpoint moves to Phase 6, where the invoice it
+creates actually exists.
 
 ---
 

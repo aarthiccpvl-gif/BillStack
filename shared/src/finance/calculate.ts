@@ -95,8 +95,7 @@ export interface CalcResult {
 }
 
 /** One minor unit at the currency's precision: 0.01 for INR, 1 for JPY. */
-const minorUnit = (decimalPlaces: number): Decimal =>
-  new Decimal(10).pow(-decimalPlaces);
+const minorUnit = (decimalPlaces: number): Decimal => new Decimal(10).pow(-decimalPlaces);
 
 /**
  * Splits a document-level discount across lines in proportion to their net value.
@@ -264,10 +263,7 @@ export const calculateDocument = (input: CalcInput): CalcResult => {
   const grandTotal = preRound.plus(roundOff);
 
   const baseDp = input.baseDecimalPlaces ?? dp;
-  const baseTotal = roundTo(
-    grandTotal.times(toDecimal(input.exchangeRateToBase ?? 1)),
-    baseDp,
-  );
+  const baseTotal = roundTo(grandTotal.times(toDecimal(input.exchangeRateToBase ?? 1)), baseDp);
 
   const lineDiscountTotal = lineDiscounts.reduce((sum, value) => sum.plus(value), new Decimal(0));
 

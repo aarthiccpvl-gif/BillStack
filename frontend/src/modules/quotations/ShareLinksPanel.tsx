@@ -15,6 +15,11 @@ import { formatDateTime } from '@/utils/format';
  * account, no other document. It expires, it can be revoked, and every open is
  * counted, so "did the customer actually look at it?" has an answer.
  *
+ * The address is shown **once**. Only its hash is stored, which is what stops a
+ * database read from handing out live links, and it means a link that was not
+ * copied has to be replaced rather than recovered. The panel says that plainly
+ * instead of showing an empty box.
+ *
  * The WhatsApp button is a plain wa.me deep link the user sends themselves; no
  * WhatsApp Business API is involved (decision Q14).
  */
@@ -28,19 +33,25 @@ export const ShareLinksPanel = ({ quotationId }: { quotationId: string }) => {
   const canShare = hasPermission(PERMISSIONS.QUOTATION_SHARE);
 
   const [expiresInDays, setExpiresInDays] = useState<number>(30);
+  /** The one link whose address this browser still knows, from creating it. */
+  const [fresh, setFresh] = useState<{
+    id: string;
+    url: string;
+    whatsappUrl: string | null;
+  } | null>(null);
 
   const linksQuery = useQuery({
     queryKey: quotationKeys.shares(quotationId),
     queryFn: () => quotationsApi.shareLinks(quotationId),
   });
 
-  const copy = async (url: string, message: string) => {
+  const copy = async (url: string): Promise<boolean> => {
     try {
       await navigator.clipboard.writeText(url);
-      toast.success(message);
+      return true;
     } catch {
-      /* Clipboard access can be refused; the link is on screen either way. */
-      toast.error('Could not copy — select the link and copy it manually.');
+      /* Clipboard access can be refused; the address is on screen either way. */
+      return false;
     }
   };
 
@@ -48,7 +59,13 @@ export const ShareLinksPanel = ({ quotationId }: { quotationId: string }) => {
     mutationFn: () => quotationsApi.createShareLink(quotationId, expiresInDays),
     onSuccess: async (link) => {
       await queryClient.invalidateQueries({ queryKey: quotationKeys.shares(quotationId) });
-      await copy(link.url, 'Link created and copied');
+      if (link.url) setFresh({ id: link.id, url: link.url, whatsappUrl: link.whatsappUrl });
+
+      const copied = link.url ? await copy(link.url) : false;
+      toast.success(
+        copied ? 'Link created and copied' : 'Link created',
+        copied ? undefined : 'Copy it from the panel — the address is shown only once.',
+      );
     },
     onError: (error: unknown) =>
       toast.error(error instanceof ApiError ? error.message : 'Could not create a link.'),
@@ -117,18 +134,27 @@ export const ShareLinksPanel = ({ quotationId }: { quotationId: string }) => {
           {links.map((link) => {
             const revoked = Boolean(link.revokedAt);
             const expired = Boolean(link.expiresAt && new Date(link.expiresAt) < new Date());
+            /* The address survives only in this browser, only for this session. */
+            const known = link.url ? link : fresh?.id === link.id ? fresh : null;
+            const url = known?.url ?? null;
 
             return (
               <li key={link.id} className="border-top py-2">
                 <div className="d-flex justify-content-between align-items-start gap-2">
                   <div style={{ minWidth: 0 }}>
-                    <div
-                      className="text-mono small text-truncate"
-                      style={{ maxWidth: '20rem' }}
-                      title={link.url}
-                    >
-                      {link.url}
-                    </div>
+                    {url ? (
+                      <div
+                        className="text-mono small text-truncate"
+                        style={{ maxWidth: '20rem' }}
+                        title={url}
+                      >
+                        {url}
+                      </div>
+                    ) : (
+                      <div className="small fst-italic text-secondary">
+                        Address shown only when created
+                      </div>
+                    )}
                     <div className="small text-secondary">
                       {revoked
                         ? `Revoked ${formatDateTime(link.revokedAt)}`
@@ -145,26 +171,38 @@ export const ShareLinksPanel = ({ quotationId }: { quotationId: string }) => {
                   </div>
 
                   <div className="btn-group btn-group-sm flex-shrink-0">
-                    <button
-                      type="button"
-                      className="btn btn-outline-secondary"
-                      title="Copy link"
-                      disabled={revoked}
-                      onClick={() => void copy(link.url, 'Link copied')}
-                    >
-                      <Copy size={13} aria-hidden />
-                      <span className="visually-hidden">Copy this link</span>
-                    </button>
-                    <a
-                      className={`btn btn-outline-secondary${revoked ? ' disabled' : ''}`}
-                      href={link.whatsappUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title="Send on WhatsApp"
-                    >
-                      <MessageCircle size={13} aria-hidden />
-                      <span className="visually-hidden">Send this link on WhatsApp</span>
-                    </a>
+                    {url && !revoked && (
+                      <>
+                        <button
+                          type="button"
+                          className="btn btn-outline-secondary"
+                          title="Copy link"
+                          onClick={() =>
+                            void copy(url).then((copied) =>
+                              copied
+                                ? toast.success('Link copied')
+                                : toast.error('Could not copy — select the address and copy it.'),
+                            )
+                          }
+                        >
+                          <Copy size={13} aria-hidden />
+                          <span className="visually-hidden">Copy this link</span>
+                        </button>
+                        {known?.whatsappUrl && (
+                          <a
+                            className="btn btn-outline-secondary"
+                            href={known.whatsappUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Send on WhatsApp"
+                          >
+                            <MessageCircle size={13} aria-hidden />
+                            <span className="visually-hidden">Send this link on WhatsApp</span>
+                          </a>
+                        )}
+                      </>
+                    )}
+
                     {canShare && !revoked && (
                       <button
                         type="button"

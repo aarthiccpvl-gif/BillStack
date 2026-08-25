@@ -62,9 +62,7 @@ export const buildQuotationData = async (
   const config = parseTemplateConfig(templateVersion.configJson, 'QUOTATION');
   const customer = asRecord(quotation.customerSnapshot);
   const company = asRecord(quotation.companySnapshot);
-  const companyAddress = asAddress(
-    (company.address as Prisma.JsonValue | undefined) ?? null,
-  );
+  const companyAddress = asAddress((company.address as Prisma.JsonValue | undefined) ?? null);
 
   /* Branding is loaded live rather than snapshotted: the bytes behind each asset
      are immutable (keys are timestamped), so this picks up the same image the
@@ -144,8 +142,7 @@ export const buildQuotationData = async (
       unit: item.unitCode,
       quantity: item.quantity.toString(),
       rate: item.rate.toString(),
-      discountLabel:
-        item.discountMode === 'PERCENT' ? `${item.discountValue.toString()}%` : null,
+      discountLabel: item.discountMode === 'PERCENT' ? `${item.discountValue.toString()}%` : null,
       discountAmount: item.discountAmount.toString(),
       taxes: item.taxes.map((tax) => ({
         label: tax.label,

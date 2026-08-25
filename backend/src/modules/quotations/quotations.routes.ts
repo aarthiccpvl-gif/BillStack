@@ -48,7 +48,10 @@ quotationsRouter.post(
   validateBody(createQuotationSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const auth = getAuth(req);
-    const created = await service.createQuotation(parsedBody(req, createQuotationSchema), auth.userId);
+    const created = await service.createQuotation(
+      parsedBody(req, createQuotationSchema),
+      auth.userId,
+    );
     sendSuccess(res, created, { status: 201 });
   }),
 );

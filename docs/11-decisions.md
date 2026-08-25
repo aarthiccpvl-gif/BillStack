@@ -115,3 +115,44 @@ Consequences:
 - [06-auth-rbac-audit-revision.md](06-auth-rbac-audit-revision.md) — role matrix fixed to the Q6 split
 - [07-template-pdf-engine.md](07-template-pdf-engine.md) — seal block and config keys
 - [09-roadmap.md](09-roadmap.md) — Phase 5/6 scope adjusted for download-only sharing
+
+---
+
+# Decisions made while building Phase 5
+
+These were not open questions — they are corrections made once the quotation flow ran against a real
+database and a real browser, recorded here because each one changes a stored shape or a contract.
+
+## 5. The round-off setting is stored, not inferred
+
+`round_off` is an *amount*, and zero is ambiguous: it means either "rounding is switched off" or "the
+total happened to be whole". The update path inferred the setting from the amount, so editing a
+quotation whose total landed on a whole rupee silently turned rounding off — and a later edit that
+produced 116,023.50 would then not round.
+
+`quotations.round_off_enabled` and `invoices.round_off_enabled` now record what was asked for
+(migration `20260825120000_round_off_enabled`). The amount still records what it produced.
+
+## 6. Optional fields accept `null`, because that is what the API returns
+
+Every edit screen reads a record and sends it back. The API returns `null` for an empty optional
+field, but the schemas only tolerated `undefined` — so a quotation loaded and saved unchanged was
+rejected as invalid, naming fields the user had never touched.
+
+`optionalText`, `optionalEmail` and `optionalId` now live in `shared/src/schemas/common.ts`, are used
+by every schema, and accept `''`, `null` and `undefined`, always producing `null`. `optionalId` also
+treats the empty string a `<select>` submits as "none" rather than coercing it to the id `0`.
+
+## 7. A share link's address is `null` after it is created
+
+Only the SHA-256 hash of a share token is stored, so a link can never be re-displayed — that is the
+point. The list endpoint was returning an empty string for the address and a WhatsApp deep link with
+a missing URL inside it. Both are now `null`, and the panel says "address shown only when created"
+instead of rendering a blank line and a broken button.
+
+## 8. The status machine lives in `@app/shared`
+
+`QUOTATION_TRANSITIONS` was duplicated: once in the service that enforces it, once implicitly in
+whatever buttons the UI decided to show. It now has one definition in
+`shared/src/constants/documents.ts`. The API still enforces it — the shared copy decides what the user
+is *offered*, never what they are trusted with.

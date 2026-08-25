@@ -69,7 +69,9 @@ export const ItemsGrid = ({
   };
 
   const removeLine = (index: number) => {
-    onChange(items.length === 1 ? [emptyLine()] : items.filter((_, position) => position !== index));
+    onChange(
+      items.length === 1 ? [emptyLine()] : items.filter((_, position) => position !== index),
+    );
   };
 
   const duplicateLine = (index: number) => {
@@ -211,7 +213,9 @@ export const ItemsGrid = ({
                       aria-label={`HSN or SAC, line ${index + 1}`}
                       disabled={disabled}
                       value={line.hsnSacCode ?? ''}
-                      onChange={(event) => update(index, { hsnSacCode: event.target.value || null })}
+                      onChange={(event) =>
+                        update(index, { hsnSacCode: event.target.value || null })
+                      }
                     />
                   </td>
 
@@ -305,7 +309,10 @@ export const ItemsGrid = ({
                     {computed && computed.taxes.length > 0 && (
                       <div className="small text-secondary mt-1">
                         {computed.taxes
-                          .map((tax) => `${tax.label} ${formatMoney(tax.taxAmount, currency, { omitSymbol: true })}`)
+                          .map(
+                            (tax) =>
+                              `${tax.label} ${formatMoney(tax.taxAmount, currency, { omitSymbol: true })}`,
+                          )
                           .join(' + ')}
                       </div>
                     )}

@@ -13,11 +13,7 @@ import {
   type UpdateQuotationInput,
 } from '@app/shared';
 import { prisma, type TransactionClient } from '../../db/prisma';
-import {
-  BusinessRuleError,
-  ImmutableResourceError,
-  NotFoundError,
-} from '../../utils/errors';
+import { BusinessRuleError, ImmutableResourceError, NotFoundError } from '../../utils/errors';
 import { recordAudit } from '../../services/audit.service';
 import { allocateNumber } from '../../services/numbering.service';
 import { resolveTaxGroups } from '../../services/tax.service';
@@ -103,7 +99,9 @@ const prepareDocument = async (
 
   const template = await tx.template.findUnique({
     where: { id: templateId },
-    include: { versions: { where: { status: 'PUBLISHED' }, orderBy: { version: 'desc' }, take: 1 } },
+    include: {
+      versions: { where: { status: 'PUBLISHED' }, orderBy: { version: 'desc' }, take: 1 },
+    },
   });
 
   if (!template || template.docType !== 'QUOTATION') {

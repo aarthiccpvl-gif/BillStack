@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { optionalEmail, optionalText } from './common';
 
 /**
  * Company profile and branding.
@@ -7,15 +8,6 @@ import { z } from 'zod';
  * time, but the values that documents depend on — company name, state code —
  * are validated whenever they are present.
  */
-
-const optionalText = (max: number) =>
-  z
-    .string()
-    .trim()
-    .max(max)
-    .optional()
-    .or(z.literal(''))
-    .transform((value) => (value === '' ? null : (value ?? null)));
 
 /** 15 characters: 2 state + 10 PAN + 1 entity + 1 'Z' + 1 checksum. */
 export const gstinSchema = z
@@ -56,14 +48,7 @@ export const updateCompanySchema = z.object({
   country: optionalText(100),
   postalCode: optionalText(20),
   phone: optionalText(40),
-  email: z
-    .string()
-    .trim()
-    .email('Enter a valid email address')
-    .max(190)
-    .optional()
-    .or(z.literal(''))
-    .transform((value) => (value === '' ? null : (value ?? null))),
+  email: optionalEmail,
   website: optionalText(190),
   gstin: gstinSchema
     .optional()

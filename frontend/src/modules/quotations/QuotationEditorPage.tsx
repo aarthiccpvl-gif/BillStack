@@ -53,6 +53,33 @@ import { useDocumentTotals } from '@/modules/documents/useDocumentTotals';
 
 const DEFAULT_VALIDITY_DAYS = 30;
 
+/**
+ * A stable fingerprint of the form, used to answer "has anything actually changed?".
+ *
+ * React Hook Form's own `isDirty` reports true here as soon as the document is
+ * loaded, because the values it is given never deep-equal the blank defaults it
+ * was created with. Comparing a canonical snapshot instead means the "unsaved
+ * changes" bar appears when the user has changed something, and not before.
+ */
+const fingerprint = (value: unknown): string =>
+  JSON.stringify(value, (_key, entry: unknown) =>
+    entry && typeof entry === 'object' && !Array.isArray(entry)
+      ? Object.fromEntries(
+          Object.entries(entry as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)),
+        )
+      : entry,
+  );
+
+/**
+ * Reads an optional reference out of a `<select>`.
+ *
+ * React Hook Form hands `setValueAs` whatever the field currently holds, which is
+ * `null` for an unset reference — and `Number(null)` is 0, an id that exists for
+ * no record. Everything that is not a chosen value becomes null.
+ */
+const asOptionalId = (value: unknown): number | null =>
+  value === '' || value === null || value === undefined ? null : Number(value);
+
 const blankValues = (): CreateQuotationInput =>
   ({
     customerId: undefined,
@@ -198,7 +225,7 @@ export const QuotationEditorPage = () => {
     watch,
     setValue,
     setError,
-    formState: { errors, isDirty, isSubmitting },
+    formState: { errors, isSubmitting },
   } = useForm<CreateQuotationInput>({
     resolver: zodResolver(createQuotationSchema),
     defaultValues: blankValues(),
@@ -209,6 +236,9 @@ export const QuotationEditorPage = () => {
 
   const [changeReason, setChangeReason] = useState('');
   const [loaded, setLoaded] = useState(false);
+  const [baseline, setBaseline] = useState(() => fingerprint(blankValues()));
+
+  const dirty = fingerprint(values) !== baseline;
 
   /* Load once. Re-running this on every refetch would discard whatever the user
      has typed since, which is a far worse failure than a slightly stale form. */
@@ -216,12 +246,13 @@ export const QuotationEditorPage = () => {
     if (!isEdit || !quotation || loaded) return;
     if (customers === undefined) return;
 
-    reset(
-      toFormValues(
-        quotation,
-        customers.find((customer) => customer.id === quotation.customerId),
-      ),
+    const loadedValues = toFormValues(
+      quotation,
+      customers.find((customer) => customer.id === quotation.customerId),
     );
+
+    reset(loadedValues);
+    setBaseline(fingerprint(loadedValues));
     setLoaded(true);
   }, [isEdit, quotation, customers, loaded, reset]);
 
@@ -271,7 +302,7 @@ export const QuotationEditorPage = () => {
   };
 
   const customerField = register('customerId', {
-    setValueAs: (value: string) => (value === '' ? undefined : Number(value)),
+    setValueAs: (value: unknown) => asOptionalId(value) ?? undefined,
   });
 
   const mutation = useMutation({
@@ -286,12 +317,13 @@ export const QuotationEditorPage = () => {
       await queryClient.invalidateQueries({ queryKey: quotationKeys.all });
 
       if (isEdit) {
-        reset(
-          toFormValues(
-            saved,
-            customers?.find((customer) => customer.id === saved.customerId),
-          ),
+        const savedValues = toFormValues(
+          saved,
+          customers?.find((customer) => customer.id === saved.customerId),
         );
+
+        reset(savedValues);
+        setBaseline(fingerprint(savedValues));
         setChangeReason('');
         toast.success(`${saved.number} saved`);
       } else {
@@ -334,6 +366,26 @@ export const QuotationEditorPage = () => {
     );
   }
 
+  /* Until the document is in the form, showing the blank defaults would invite the
+     user to type into fields that are about to be overwritten by the load. */
+  if (isEdit && !loaded) {
+    return (
+      <>
+        <PageHeader
+          title="Loading quotation…"
+          breadcrumbs={[{ label: 'Sales' }, { label: 'Quotations', to: '/quotations' }]}
+        />
+        <div className="card">
+          <div className="card-body placeholder-glow">
+            <span className="placeholder col-4 mb-2" />
+            <span className="placeholder col-12 mb-2" />
+            <span className="placeholder col-8" />
+          </div>
+        </div>
+      </>
+    );
+  }
+
   const addresses = selectedCustomer?.addresses ?? [];
   const addressLabel = (address: CustomerAddressRecord): string =>
     [address.label, address.line1, address.city].filter(Boolean).join(' · ') ||
@@ -342,7 +394,36 @@ export const QuotationEditorPage = () => {
   const customFields = values.customFields ?? [];
 
   return (
-    <form onSubmit={handleSubmit((input) => mutation.mutateAsync(input))} noValidate>
+    <form
+      onSubmit={handleSubmit(
+        async (input) => {
+          /* The API enforces this too; asking here saves a pointless round trip. */
+          if (needsReason && !changeReason.trim()) {
+            toast.error(
+              'A reason is needed',
+              'This quotation has been issued, so the change has to explain itself.',
+            );
+            document.getElementById('changeReason')?.focus();
+            return;
+          }
+
+          await mutation.mutateAsync(input);
+        },
+        /* Silence on a rejected submit is the worst outcome: the button appears
+           dead. Name the first field that is wrong and scroll it into view. */
+        (fieldErrors) => {
+          const [path, error] = Object.entries(fieldErrors)[0] ?? [];
+          toast.error(
+            'Check the highlighted fields',
+            path
+              ? `${path}: ${(error as { message?: string })?.message ?? 'not valid'}`
+              : undefined,
+          );
+          if (path) document.getElementById(path)?.scrollIntoView({ block: 'center' });
+        },
+      )}
+      noValidate
+    >
       <PageHeader
         title={isEdit ? `Edit ${quotation?.number ?? 'quotation'}` : 'New quotation'}
         description={
@@ -550,14 +631,16 @@ export const QuotationEditorPage = () => {
                     />
                   </Field>
 
-                  <Field label="Billing address" htmlFor="billingAddressId" className="col-md-6 mb-3">
+                  <Field
+                    label="Billing address"
+                    htmlFor="billingAddressId"
+                    className="col-md-6 mb-3"
+                  >
                     <select
                       id="billingAddressId"
                       className={selectClass(errors.billingAddressId)}
                       disabled={locked || addresses.length === 0}
-                      {...register('billingAddressId', {
-                        setValueAs: (value: string) => (value === '' ? null : Number(value)),
-                      })}
+                      {...register('billingAddressId', { setValueAs: asOptionalId })}
                     >
                       <option value="">Customer's default</option>
                       {addresses
@@ -579,9 +662,7 @@ export const QuotationEditorPage = () => {
                       id="shippingAddressId"
                       className={selectClass(errors.shippingAddressId)}
                       disabled={locked || addresses.length === 0}
-                      {...register('shippingAddressId', {
-                        setValueAs: (value: string) => (value === '' ? null : Number(value)),
-                      })}
+                      {...register('shippingAddressId', { setValueAs: asOptionalId })}
                     >
                       <option value="">None</option>
                       {addresses
@@ -620,7 +701,11 @@ export const QuotationEditorPage = () => {
             <div className="card-body">
               <FieldGroup title="Notes & terms">
                 <div className="row">
-                  <Field label="Message to the customer" htmlFor="customerMessage" className="col-12 mb-3">
+                  <Field
+                    label="Message to the customer"
+                    htmlFor="customerMessage"
+                    className="col-12 mb-3"
+                  >
                     <textarea
                       id="customerMessage"
                       rows={2}
@@ -659,9 +744,7 @@ export const QuotationEditorPage = () => {
                       id="bankAccountId"
                       className={selectClass(errors.bankAccountId)}
                       disabled={locked}
-                      {...register('bankAccountId', {
-                        setValueAs: (value: string) => (value === '' ? null : Number(value)),
-                      })}
+                      {...register('bankAccountId', { setValueAs: asOptionalId })}
                     >
                       <option value="">None</option>
                       {bankAccounts
@@ -712,9 +795,7 @@ export const QuotationEditorPage = () => {
                       id="templateId"
                       className={selectClass(errors.templateId)}
                       disabled={locked}
-                      {...register('templateId', {
-                        setValueAs: (value: string) => (value === '' ? null : Number(value)),
-                      })}
+                      {...register('templateId', { setValueAs: asOptionalId })}
                     >
                       <option value="">Company default</option>
                       {templatesQuery.data
@@ -840,9 +921,11 @@ export const QuotationEditorPage = () => {
         </div>
       </div>
 
-      {isDirty && !locked && (
+      {dirty && !locked && (
         <div className="position-sticky bottom-0 bg-white border-top py-2 px-3 mt-3 d-flex justify-content-between align-items-center">
-          <span className="small text-secondary">Unsaved changes</span>
+          <span className="small text-secondary">
+            {isEdit ? 'Unsaved changes' : 'Not saved yet'}
+          </span>
           <button
             type="submit"
             className="btn btn-sm btn-primary"

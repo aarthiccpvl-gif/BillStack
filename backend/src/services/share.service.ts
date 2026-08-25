@@ -33,10 +33,9 @@ const toRecord = (
   documentNumber: string,
 ): ShareLinkRecord => {
   /* The plain token exists only in the response that creates it; afterwards only
-     the hash is stored, so an old link can never be re-displayed. */
-  const url = token ? `${env.APP_URL}/api/public/documents/${token}` : '';
-
-  const message = `${documentNumber} — ${url}`;
+     the hash is stored, so an old link can never be re-displayed. Null, not an
+     empty string: "we cannot show this" is a different answer from "here it is". */
+  const url = token ? `${env.APP_URL}/api/public/documents/${token}` : null;
 
   return {
     id: share.id.toString(),
@@ -47,7 +46,9 @@ const toRecord = (
     lastViewedAt: share.lastViewedAt ? share.lastViewedAt.toISOString() : null,
     createdAt: share.createdAt.toISOString(),
     /* A plain deep link — no WhatsApp API integration (decision Q14). */
-    whatsappUrl: `https://wa.me/?text=${encodeURIComponent(message)}`,
+    whatsappUrl: url
+      ? `https://wa.me/?text=${encodeURIComponent(`${documentNumber} — ${url}`)}`
+      : null,
   };
 };
 

@@ -48,7 +48,9 @@ export const DocumentPreviewCard = ({
       <div className="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
         <span className="label-caps">
           Document preview
-          {preview.isFetching && <RefreshCw size={12} className="ms-2 text-secondary" aria-hidden />}
+          {preview.isFetching && (
+            <RefreshCw size={12} className="ms-2 text-secondary" aria-hidden />
+          )}
         </span>
 
         <div className="d-flex align-items-center gap-2">
@@ -136,8 +138,8 @@ export const DocumentPreviewCard = ({
       </div>
 
       <div className="card-footer bg-white small text-secondary">
-        This is the real renderer output, as the document was last saved — the PDF is
-        produced from exactly this HTML.
+        This is the real renderer output, as the document was last saved — the PDF is produced from
+        exactly this HTML.
       </div>
     </div>
   );
