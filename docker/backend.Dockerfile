@@ -59,7 +59,10 @@ FROM deps AS build
 COPY tsconfig.base.json ./
 COPY shared ./shared
 COPY backend ./backend
-RUN npm run prisma:generate --if-present && npm run build -w backend
+
+RUN npm run build -w shared \
+    && npm run prisma:generate --if-present \
+    && npm run build -w backend
 
 # ---- runtime ----
 FROM base AS runtime
