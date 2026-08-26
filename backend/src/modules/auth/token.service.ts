@@ -81,10 +81,14 @@ export const parseDuration = (value: string): number => {
 
 const baseCookie = (): CookieOptions => ({
   httpOnly: true,
-  secure: env.COOKIE_SECURE || isProduction,
-  /* Lax rather than Strict: the app is a same-origin SPA, and Strict would break a
-     link that lands the user on an authenticated page from an external bookmark. */
-  sameSite: 'lax',
+  /* A browser ignores SameSite=None on a cookie that is not Secure, so `none`
+     implies HTTPS whatever else the environment says. */
+  secure: env.COOKIE_SAMESITE === 'none' || env.COOKIE_SECURE || isProduction,
+  /* Lax by default rather than Strict: the app is a same-origin SPA, and Strict
+     would break a link that lands the user on an authenticated page from an
+     external bookmark. COOKIE_SAMESITE=none exists for a split deployment, where
+     the app and the API are on different sites and Lax would send nothing. */
+  sameSite: env.COOKIE_SAMESITE,
   domain: env.COOKIE_DOMAIN === 'localhost' ? undefined : env.COOKIE_DOMAIN,
 });
 

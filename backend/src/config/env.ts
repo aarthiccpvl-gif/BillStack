@@ -40,7 +40,30 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: port.default(4000),
   APP_URL: z.string().url().default('http://localhost:4000'),
-  FRONTEND_URL: z.string().url().default('http://localhost:5175'),
+  /**
+   * Browser origins allowed to call this API, comma-separated.
+   *
+   * Only CORS reads this, and only a split deployment needs it: when one process
+   * serves both the API and the built app there is a single origin and no
+   * preflight at all. Entries are normalised to bare origins because that is what
+   * a browser puts in the `Origin` header - `https://app.example.com/` with a
+   * trailing slash never matches and produces a CORS failure that looks like a
+   * server fault.
+   */
+  FRONTEND_URL: z
+    .string()
+    .default('http://localhost:5175')
+    .transform((value) =>
+      value
+        .split(',')
+        .map((part) => part.trim().replace(/\/+$/, ''))
+        .filter(Boolean),
+    )
+    .refine((list) => list.length > 0, 'FRONTEND_URL must name at least one origin')
+    .refine(
+      (list) => list.every((origin) => /^https?:\/\/[^/?#]+$/.test(origin)),
+      'each FRONTEND_URL entry must be a bare origin, e.g. https://app.example.com',
+    ),
   TZ: z.string().default('Asia/Kolkata'),
 
   /* database */
@@ -56,6 +79,17 @@ const envSchema = z.object({
   JWT_REFRESH_TTL: z.string().default('7d'),
   COOKIE_DOMAIN: z.string().default('localhost'),
   COOKIE_SECURE: booleanish.default(false),
+  /**
+   * `lax` suits the deployment this app is built for: one origin serving both the
+   * API and the web app.
+   *
+   * Set `none` only when the browser app is on a different *site* from the API.
+   * A cross-site request carries no Lax cookie at all, so the session simply never
+   * arrives and every endpoint answers 401. Note that `none` forces Secure and
+   * makes these third-party cookies - Safari blocks those by default and Chrome is
+   * retiring them, so a single origin is the durable answer, not this flag.
+   */
+  COOKIE_SAMESITE: z.enum(['lax', 'strict', 'none']).default('lax'),
   LOGIN_MAX_ATTEMPTS: z.coerce.number().int().min(1).default(5),
   LOGIN_LOCK_MINUTES: z.coerce.number().int().min(1).default(15),
 

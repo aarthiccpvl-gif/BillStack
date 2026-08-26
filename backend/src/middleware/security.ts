@@ -3,8 +3,9 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import type { RequestHandler } from 'express';
 import { ERROR_CODES } from '@app/shared';
-import { env, isTest } from '../config/env';
+import { env, isProduction, isTest } from '../config/env';
 import { sendFailure } from '../utils/http';
+import { logger } from '../utils/logger';
 import { getRequestId } from '../utils/request-context';
 
 /**
@@ -13,14 +14,37 @@ import { getRequestId } from '../utils/request-context';
  * convenient one.
  */
 
-export const securityHeaders = (): RequestHandler =>
+/**
+ * The CSP has two shapes because the process has two jobs.
+ *
+ * API-only, it serves JSON and file streams and never a page, so forbidding
+ * everything costs nothing. Serving the built web app as well, it has to allow
+ * that app's own bundle - and inline *style*, because the document preview is an
+ * `srcdoc` iframe carrying the print stylesheet inside it, and a sandboxed srcdoc
+ * frame inherits this policy. Inline script stays forbidden either way, which is
+ * the half that matters.
+ */
+export const securityHeaders = ({ servesWebApp }: { servesWebApp: boolean }): RequestHandler =>
   helmet({
-    // The API serves JSON and file streams, never HTML pages, so a tight CSP is free.
     contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'none'"],
-        frameAncestors: ["'none'"],
-      },
+      directives: servesWebApp
+        ? {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            imgSrc: ["'self'", 'data:', 'blob:'],
+            fontSrc: ["'self'", 'data:'],
+            connectSrc: ["'self'"],
+            frameSrc: ["'self'", 'blob:'],
+            objectSrc: ["'none'"],
+            baseUri: ["'self'"],
+            formAction: ["'self'"],
+            frameAncestors: ["'none'"],
+          }
+        : {
+            defaultSrc: ["'none'"],
+            frameAncestors: ["'none'"],
+          },
     },
     crossOriginResourcePolicy: { policy: 'same-site' },
     referrerPolicy: { policy: 'no-referrer' },
@@ -28,13 +52,47 @@ export const securityHeaders = (): RequestHandler =>
 
 export const corsPolicy = (): RequestHandler =>
   cors({
-    origin: [env.FRONTEND_URL],
+    origin: env.FRONTEND_URL,
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'X-Requested-With', 'X-Request-Id'],
     exposedHeaders: ['X-Request-Id', 'Content-Disposition'],
     maxAge: 600,
   });
+
+/**
+ * A cross-site deployment fails in a way that reads as a server fault: every
+ * endpoint answers 401 because the browser never sends a Lax cookie across sites,
+ * and the CORS preflight fails separately on top of it. Neither symptom points at
+ * the configuration that caused it, so say so at boot instead.
+ *
+ * `onrender.com`, `vercel.app`, `netlify.app` and friends are on the Public Suffix
+ * List, which means two hostnames under them are different *sites*, not merely
+ * different hosts - so a host mismatch is enough to warn on.
+ */
+export const warnOnCrossSiteAuth = (): void => {
+  if (!isProduction) return;
+
+  const apiHost = new URL(env.APP_URL).host;
+  const foreign = env.FRONTEND_URL.filter((origin) => new URL(origin).host !== apiHost);
+
+  if (foreign.length === 0) return;
+
+  if (env.COOKIE_SAMESITE === 'none') {
+    logger.warn(
+      { apiHost, foreign },
+      'the web app is on a different site from the API, so the auth cookies are third-party: Safari blocks these by default and Chrome is retiring them. Serving the built app from this process is the durable fix.',
+    );
+    return;
+  }
+
+  logger.error(
+    { apiHost, foreign, cookieSameSite: env.COOKIE_SAMESITE },
+    'the web app is on a different site from the API but the auth cookies are SameSite=' +
+      `${env.COOKIE_SAMESITE}, which a browser will not send cross-site: every authenticated request will answer 401. ` +
+      'Either serve the built app from this process (one origin, nothing to configure) or set COOKIE_SAMESITE=none.',
+  );
+};
 
 export const globalRateLimiter = (): RequestHandler =>
   rateLimit({

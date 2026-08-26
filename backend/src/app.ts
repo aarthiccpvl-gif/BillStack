@@ -41,11 +41,15 @@ const resolveFrontendDist = (): string | null => {
 export const createApp = (): Express => {
   const app = express();
 
+  /* Resolved before the first middleware: whether this process also serves the
+     built web app decides how tight the CSP can be. */
+  const frontendDist = isTest ? null : resolveFrontendDist();
+
   // Behind a reverse proxy in production; needed for correct client IPs in audit rows.
   app.set('trust proxy', 1);
   app.disable('x-powered-by');
 
-  app.use(securityHeaders());
+  app.use(securityHeaders({ servesWebApp: frontendDist !== null }));
   app.use(corsPolicy());
   app.use(requestContextMiddleware);
 
@@ -84,8 +88,6 @@ export const createApp = (): Express => {
    * In development Vite serves the app on its own port and this stays dormant; in
    * tests it is switched off so the API's own 404 contract is what gets exercised.
    */
-  const frontendDist = isTest ? null : resolveFrontendDist();
-
   if (frontendDist) {
     logger.info({ frontendDist }, 'serving the built web app from the API process');
 

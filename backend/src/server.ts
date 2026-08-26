@@ -3,6 +3,7 @@ import { APP_NAME, APP_VERSION } from './config/app-info';
 import { env } from './config/env';
 import { disconnectDatabase } from './db/prisma';
 import { startDailyJob, stopDailyJob } from './jobs/daily.job';
+import { warnOnCrossSiteAuth } from './middleware/security';
 import { logger } from './utils/logger';
 
 process.env.TZ = env.TZ;
@@ -10,6 +11,7 @@ process.env.TZ = env.TZ;
 const app = createApp();
 const server = app.listen(env.PORT, () => {
   startDailyJob();
+  warnOnCrossSiteAuth();
   logger.info(
     { port: env.PORT, env: env.NODE_ENV, tz: env.TZ },
     `${APP_NAME} v${APP_VERSION} listening on ${env.APP_URL}`,
