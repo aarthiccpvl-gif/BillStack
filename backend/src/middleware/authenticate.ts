@@ -60,6 +60,23 @@ export const getAuth = (req: Request) => {
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 /**
+ * The handful of POSTs that produce output rather than change anything.
+ *
+ * They are POSTs only because their input is a list too long for a URL — and a
+ * list of document ids has no business in a server access log either. Each still
+ * enforces its own permission, which a read-only role has to actually hold; this
+ * list only stops the blanket method check from refusing them first.
+ *
+ * Every entry here is a deliberate hole in a security guard, so the RBAC matrix
+ * asserts the list is exactly this and nothing else.
+ */
+export const READ_ONLY_POST_ALLOWLIST: readonly string[] = ['/api/export/documents/bulk-pdf'];
+
+const isAllowlistedRead = (req: Request): boolean =>
+  req.method === 'POST' &&
+  READ_ONLY_POST_ALLOWLIST.includes(`${req.baseUrl}${req.path}`.replace(/\/+$/, ''));
+
+/**
  * The structural guarantee behind the Finance Viewer requirement.
  *
  * Any role flagged read-only is refused every non-GET request here, before a
@@ -67,7 +84,7 @@ const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
  * cannot be used to write.
  */
 export const enforceReadOnlyRole = (req: Request, _res: Response, next: NextFunction): void => {
-  if (req.auth?.isReadOnly && !SAFE_METHODS.has(req.method)) {
+  if (req.auth?.isReadOnly && !SAFE_METHODS.has(req.method) && !isAllowlistedRead(req)) {
     next(
       new ForbiddenError(
         'Your role has read-only access. You can view, export and download, but not make changes.',

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Copy, FileDown, Pencil, Trash2 } from 'lucide-react';
+import { Copy, FileDown, Pencil, ReceiptText, Trash2 } from 'lucide-react';
 import {
   PERMISSIONS,
   STATUS_LABELS,
@@ -17,11 +17,12 @@ import { useToast } from '@/components/Toast';
 import { useAuth } from '@/app/AuthProvider';
 import { ApiError } from '@/services/api-client';
 import { quotationKeys, quotationsApi } from '@/services/quotations-api';
+import { invoiceKeys } from '@/services/invoices-api';
 import { useCurrencyFormat } from '@/hooks/useMasters';
 import { formatDate, formatDateTime, saveBlob } from '@/utils/format';
 import { DocumentPreviewCard } from '@/modules/documents/DocumentPreviewCard';
-import { ShareLinksPanel } from './ShareLinksPanel';
-import { RevisionHistoryPanel } from './RevisionHistoryPanel';
+import { ShareLinksPanel } from '@/modules/documents/ShareLinksPanel';
+import { RevisionHistoryPanel } from '@/modules/documents/RevisionHistoryPanel';
 
 /**
  * A single quotation.
@@ -95,6 +96,25 @@ export const QuotationDetailPage = () => {
       toast.error(error instanceof ApiError ? error.message : 'Could not change the status.'),
   });
 
+  /**
+   * Conversion.
+   *
+   * One call: the invoice is created, the quotation becomes CONVERTED and the two
+   * are linked, all inside a single transaction on the server. The user lands on
+   * the invoice, because that is the document they now have to act on.
+   */
+  const convertMutation = useMutation({
+    mutationFn: () => quotationsApi.convert(id, {}),
+    onSuccess: async (invoice) => {
+      await queryClient.invalidateQueries({ queryKey: quotationKeys.all });
+      await queryClient.invalidateQueries({ queryKey: invoiceKeys.all });
+      toast.success(`${invoice.number} raised from ${quotation?.number ?? 'this quotation'}`);
+      navigate(`/invoices/${invoice.id}`);
+    },
+    onError: (error: unknown) =>
+      toast.error(error instanceof ApiError ? error.message : 'Could not convert this quotation.'),
+  });
+
   const duplicateMutation = useMutation({
     mutationFn: () => quotationsApi.duplicate(id),
     onSuccess: async (created) => {
@@ -141,6 +161,7 @@ export const QuotationDetailPage = () => {
   const canUpdate = hasPermission(PERMISSIONS.QUOTATION_UPDATE);
   const canChangeStatus = hasPermission(PERMISSIONS.QUOTATION_UPDATE_STATUS);
   const canCreate = hasPermission(PERMISSIONS.QUOTATION_CREATE);
+  const canConvert = hasPermission(PERMISSIONS.QUOTATION_CONVERT);
   const canDelete = hasPermission(PERMISSIONS.QUOTATION_DELETE);
   const canDownload = hasPermission(PERMISSIONS.QUOTATION_DOWNLOAD);
 
@@ -189,6 +210,18 @@ export const QuotationDetailPage = () => {
                 >
                   <FileDown size={14} className="me-1" aria-hidden />
                   {downloading ? 'Preparing…' : 'Download PDF'}
+                </button>
+              )}
+
+              {canConvert && quotation.status === 'ACCEPTED' && (
+                <button
+                  type="button"
+                  className="btn btn-sm btn-success"
+                  disabled={convertMutation.isPending}
+                  onClick={() => convertMutation.mutate()}
+                >
+                  <ReceiptText size={14} className="me-1" aria-hidden />
+                  {convertMutation.isPending ? 'Converting…' : 'Convert to invoice'}
                 </button>
               )}
 
@@ -273,9 +306,13 @@ export const QuotationDetailPage = () => {
         </div>
       )}
 
-      {quotation?.convertedInvoiceNumber && (
+      {quotation?.convertedInvoiceId && (
         <div className="alert alert-success py-2 small" role="status">
-          Converted to invoice {quotation.convertedInvoiceNumber}.
+          Converted to invoice{' '}
+          <Link to={`/invoices/${quotation.convertedInvoiceId}`}>
+            {quotation.convertedInvoiceNumber}
+          </Link>
+          .
         </div>
       )}
 
@@ -402,10 +439,19 @@ export const QuotationDetailPage = () => {
           )}
 
           <div className="mb-3">
-            <ShareLinksPanel quotationId={id} />
+            <ShareLinksPanel
+              documentId={id}
+              api={quotationsApi}
+              sharesKey={quotationKeys.shares(id)}
+              sharePermission={PERMISSIONS.QUOTATION_SHARE}
+            />
           </div>
 
-          <RevisionHistoryPanel quotationId={id} />
+          <RevisionHistoryPanel
+            documentId={id}
+            historyKey={quotationKeys.history(id)}
+            fetchHistory={quotationsApi.history}
+          />
         </div>
       </div>
     </>

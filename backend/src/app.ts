@@ -1,9 +1,12 @@
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 import express, { type Express } from 'express';
 import cookieParser from 'cookie-parser';
 import pinoHttp from 'pino-http';
 import { API_PREFIX } from './config/app-info';
 import { isTest } from './config/env';
 import { apiRouter } from './routes';
+import { publicRoute } from './middleware/authorize';
 import { errorHandler, notFoundHandler } from './middleware/error-handler';
 import { requestContextMiddleware } from './middleware/request-context';
 import { corsPolicy, globalRateLimiter, securityHeaders } from './middleware/security';
@@ -15,6 +18,26 @@ import { assertRoutesProtected } from './utils/route-audit';
  * Builds the Express application. Kept free of listening/lifecycle concerns so the
  * test suite can mount it with Supertest without opening a port.
  */
+
+/**
+ * Where the built web app lives, or null when there is no build to serve.
+ *
+ * Resolved from this file rather than from `process.cwd()`, because the working
+ * directory differs between `npm run dev -w backend` (backend/), a Render start
+ * command (repo root) and a container (/app). `FRONTEND_DIST` overrides it for a
+ * layout none of those guesses fit.
+ */
+const resolveFrontendDist = (): string | null => {
+  const candidates = [
+    process.env.FRONTEND_DIST,
+    /* backend/src/app.ts and backend/dist/app.js are both two levels down. */
+    path.resolve(__dirname, '../../frontend/dist'),
+    path.resolve(process.cwd(), 'frontend/dist'),
+  ].filter((candidate): candidate is string => Boolean(candidate));
+
+  return candidates.find((candidate) => existsSync(path.join(candidate, 'index.html'))) ?? null;
+};
+
 export const createApp = (): Express => {
   const app = express();
 
@@ -52,6 +75,39 @@ export const createApp = (): Express => {
 
   /* Fails the boot if a mutating route shipped without a declared permission. */
   assertRoutesProtected(app);
+
+  /**
+   * Single-service deployment: one Express process serves both the API and the
+   * built web app, so there is one origin and the httpOnly auth cookies work with
+   * no CORS or SameSite gymnastics.
+   *
+   * In development Vite serves the app on its own port and this stays dormant; in
+   * tests it is switched off so the API's own 404 contract is what gets exercised.
+   */
+  const frontendDist = isTest ? null : resolveFrontendDist();
+
+  if (frontendDist) {
+    logger.info({ frontendDist }, 'serving the built web app from the API process');
+
+    app.use(express.static(frontendDist));
+
+    /* Client-side routing: /login, /quotations/12 and friends are React routes, so
+       an unmatched GET returns the shell and lets the router decide.
+
+       Anything under the API prefix is deliberately excluded — an unknown endpoint
+       must stay a JSON 404 rather than quietly returning an HTML page, which is
+       exactly the failure that makes a broken fetch look like a broken parser. */
+    app.get('*', publicRoute(), (req, res, next) => {
+      if (req.path.startsWith(API_PREFIX)) {
+        next();
+        return;
+      }
+
+      res.sendFile(path.join(frontendDist, 'index.html'), (error) => {
+        if (error) next(error);
+      });
+    });
+  }
 
   app.use(notFoundHandler);
   app.use(errorHandler);

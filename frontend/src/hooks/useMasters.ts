@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import type { CurrencyFormat } from '@app/shared';
 import { MASTER_STALE_TIME, masterKeys, mastersApi } from '@/services/masters-api';
 
 /**
@@ -63,6 +64,34 @@ export const useNumberingSeries = () =>
     queryFn: () => mastersApi.numberingSeries(),
     staleTime: MASTER_STALE_TIME,
   });
+
+/**
+ * Formats a figure that arrives with its own currency snapshot.
+ *
+ * A saved document carries the symbol and decimal places it was raised with, but
+ * not how the digits should be grouped — and ₹10,00,000 versus $1,000,000 is not
+ * a cosmetic difference. The row supplies what it froze; the master supplies the
+ * grouping, falling back to western when the code is unknown.
+ */
+export const useCurrencyFormatter = () => {
+  const { data } = useCurrencies(true);
+
+  return (row: {
+    currencyCode: string;
+    currencySymbol?: string;
+    currencyDecimalPlaces?: number;
+  }): CurrencyFormat => {
+    const master = data?.find((currency) => currency.code === row.currencyCode);
+
+    return {
+      code: row.currencyCode,
+      symbol: row.currencySymbol ?? master?.symbol ?? row.currencyCode,
+      decimalPlaces: row.currencyDecimalPlaces ?? master?.decimalPlaces ?? 2,
+      symbolPosition: master?.symbolPosition ?? 'PREFIX',
+      separatorStyle: master?.separatorStyle ?? 'WESTERN',
+    };
+  };
+};
 
 /** Currency formatting metadata for a code, with a sane fallback. */
 export const useCurrencyFormat = (code: string) => {

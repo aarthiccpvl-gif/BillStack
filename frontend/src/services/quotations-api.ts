@@ -1,6 +1,8 @@
 import type {
+  ConvertQuotationInput,
   CreateQuotationInput,
   DocumentRevisionRecord,
+  InvoiceRecord,
   QuotationListRow,
   QuotationRecord,
   QuotationStatusInput,
@@ -34,6 +36,10 @@ export const quotationsApi = {
   changeStatus: (id: string, input: QuotationStatusInput) =>
     apiClient.post<QuotationRecord>(`/quotations/${id}/status`, input),
   duplicate: (id: string) => apiClient.post<QuotationRecord>(`/quotations/${id}/duplicate`),
+
+  /** Returns the new invoice; the quotation becomes CONVERTED in the same call. */
+  convert: (id: string, input: ConvertQuotationInput) =>
+    apiClient.post<InvoiceRecord>(`/quotations/${id}/convert`, input),
 
   history: (id: string) => apiClient.get<DocumentRevisionRecord[]>(`/quotations/${id}/history`),
 

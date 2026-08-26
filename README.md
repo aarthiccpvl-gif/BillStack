@@ -4,12 +4,15 @@ An internal web application for creating, managing, rendering and sharing profes
 **quotations and invoices**. Single company, multi-currency, GST-aware, with full revision and
 audit history.
 
-> **Status: Phase 5 complete — quotations.** Raise a quotation, number it `QT001/2026-2027`, work in
-> any of ten currencies, see GST broken into its components as you type, render it through the same
-> engine the PDF uses, download it, share it as a link that expires, and change it after issue with
-> the previous version kept intact. Invoices and quotation → invoice conversion are next, in Phase 6.
-> See [docs/09-roadmap.md](docs/09-roadmap.md) for what lands when and
-> [docs/11-decisions.md](docs/11-decisions.md) for the decisions that shaped it.
+> **Status: Phase 7 complete — the whole billing loop, plus the dashboard.** Raise a quotation,
+> number it `QT001/2026-2027`, work in any of ten currencies, see GST broken into its components as
+> you type, render it through the same engine the PDF uses, share it as a link that expires, convert
+> it to `FT001/2026-2027` with every figure carried across, record what has been paid, and watch it
+> fall overdue on its own. The dashboard adds up what is owed and what is late — per currency, where
+> the figures are exact, and rolled up at the rate each document recorded. Global search finds any of
+> it; the downloads workspace takes a filtered set away as one archive. Reports, spreadsheet exports
+> and the audit-log viewer are next, in Phase 8. See [docs/09-roadmap.md](docs/09-roadmap.md) for what
+> lands when and [docs/11-decisions.md](docs/11-decisions.md) for the decisions that shaped it.
 
 ---
 

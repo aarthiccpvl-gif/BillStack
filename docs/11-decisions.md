@@ -156,3 +156,105 @@ instead of rendering a blank line and a broken button.
 whatever buttons the UI decided to show. It now has one definition in
 `shared/src/constants/documents.ts`. The API still enforces it — the shared copy decides what the user
 is *offered*, never what they are trusted with.
+
+---
+
+# Decisions made while building Phase 6
+
+## 9. The payment amount is the input; the status is the conclusion
+
+The API specification described `POST /invoices/:id/payment-status` taking `{ status, amountPaid }`.
+Accepting both would allow the two to disagree — "PAID, ₹0 received" is expressible, and in a finance
+system that is not a validation gap but a lie the database can hold.
+
+The endpoint is `POST /api/invoices/:id/payment` and it takes the amount, the date and a reference.
+The status follows: part of the total is `PARTIALLY_PAID`, the whole of it is `PAID`, and correcting
+the figure back to zero returns the invoice to `ISSUED` rather than leaving a stale `PAID` behind. An
+amount larger than the invoice is refused outright.
+
+## 10. Cancel and void are different actions, and money decides which
+
+Both keep the number and the record — nothing is ever deleted. Cancel is for an invoice that should
+not have been raised; void is for one that was raised correctly and is being nullified anyway. Once a
+payment has been recorded, cancel is refused with the reason why, because cancelling would hide money
+that was actually received. Both require a reason of at least three characters.
+
+## 11. `OVERDUE` is derived, never stored
+
+The Prisma enum has no `OVERDUE` member. It is computed on every read from the due date and what is
+still owed, so an invoice nobody has touched since Friday still tells the truth on Monday. The list
+filter accepts `status=OVERDUE` and translates it into the same question — issued, unpaid, past its
+date — rather than reading a column that would need a nightly job to stay honest.
+
+## 12. Timestamps are write-once
+
+Issuing, sending and paying each stamp a date. Repeating the action no longer moves that date: the
+first time is the fact, and a second click is not a new fact. Issuing specifically refuses outright
+rather than relying on the transition table, which treats "no change" as a harmless no-op.
+
+## 13. The conversion re-runs the engine and refuses to disagree with itself
+
+Converting copies every line, discount, tax choice and piece of wording, then recalculates rather
+than copying the stored totals — that proves the transfer is faithful instead of asserting it. If the
+recalculated total does not equal the accepted one (in practice, a tax rate whose effective date has
+since moved), the whole transaction is rolled back and the user is told to raise the invoice manually
+and record why. The exchange rate is carried over from the quotation, never re-fetched: the customer
+accepted a figure.
+
+## 14. One document, written once
+
+Quotations and invoices now share the code that decides what a document costs and what it records
+about the world: `modules/documents/prepare.service.ts` (snapshots, the calculation engine, the
+frozen tax summary) and `modules/documents/document-data.ts` (the renderer contract). The web app
+shares the editor the same way — `DocumentEditor` plus a per-type config that supplies only the
+dates, the wording and the endpoints.
+
+The alternative was a second copy of six hundred lines of money code. The PRD's rule that financial
+calculation must not be duplicated is not satisfied by two copies that happen to agree today.
+
+---
+
+# Decisions made while building Phase 7
+
+## 15. The dashboard converts, and says so
+
+Headline figures are rolled up into the base currency using the rate each document recorded when it
+was raised — never today's rate, and never a re-conversion (decision Q3). That is a reporting
+convenience rather than a fact about money, so the payload carries `mixedCurrencies` and the page
+prints a note whenever more than one currency went into a total. The per-currency table underneath
+carries the exact figures and never adds across currencies.
+
+Drafts, cancelled and void documents are excluded from every money figure. A draft is not a claim on
+anyone and a cancelled one is a claim that was withdrawn; counting either would overstate the book.
+
+## 16. Received is grouped by the invoice's month, not the payment's
+
+Payment is a single recorded amount (decision Q2), not a ledger of receipts, so "received in July"
+has no reliable answer — correcting an amount would silently move history between months. The monthly
+chart groups what has been received by the invoice's own month, which is stable, and the label says
+so rather than implying a cash-flow curve the data cannot support.
+
+## 17. `POST /api/export/documents/bulk-pdf` is the one write-shaped read
+
+A read-only role is refused every non-GET request before any controller runs. Bulk download is a POST
+only because a list of a hundred document ids has no business in a URL or a server access log, and it
+changes nothing.
+
+Rather than weaken the guard, there is a single named exception in `READ_ONLY_POST_ALLOWLIST`, and the
+RBAC matrix asserts the list contains exactly that one entry — so a second exception cannot be added
+quietly. The route still enforces `document.bulk_download`, which the role has to actually hold.
+
+## 18. The sidebar and the router are guarded on the same permission
+
+Four screens — products & services, templates, company settings and masters — were hidden from the
+Finance Viewer's sidebar but reachable by typing the URL, because the routes were guarded on
+`*_READ` (which they hold, since documents need that data) while the sidebar used the authoring
+permission. They now agree, and a 32-case test walks the navigation manifest for every role to prove
+it stays that way.
+
+## 19. The chart is hand-drawn SVG
+
+Three series of twelve bars does not justify a charting dependency. Drawing it directly keeps the
+figures formatted by the same `formatMoney` as the rest of the application, keeps the colours in the
+SCSS theme rather than a JavaScript config, and lets the accessible version be a real table of the
+same numbers rather than an alt attribute.

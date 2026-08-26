@@ -59,8 +59,40 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Where the API lives.
+ *
+ * The default — and the right answer in development and in the single-service
+ * deployment alike — is the relative `/api`: Vite proxies it to the backend, and
+ * in production the same Express process serves both. Same origin is not a
+ * detail here, it is what makes the httpOnly `SameSite=Lax` session cookies work
+ * at all; point this at another origin and the browser will simply not send them.
+ *
+ * `VITE_API_URL` stays as an escape hatch for a genuinely separate API host, and
+ * must then include the `/api` path. A bare origin gets `/api` appended rather
+ * than silently producing `POST /auth/login`, which the API does not serve.
+ */
+const resolveBaseUrl = (): string => {
+  const configured = import.meta.env.VITE_API_URL?.trim();
+  if (!configured) return '/api';
+
+  const withoutTrailingSlash = configured.replace(/\/+$/, '');
+  const hasPath = /^https?:\/\/[^/]+\/.+/i.test(withoutTrailingSlash) || configured.startsWith('/');
+
+  const baseUrl = hasPath ? withoutTrailingSlash : `${withoutTrailingSlash}/api`;
+
+  if (import.meta.env.DEV && !baseUrl.startsWith('/')) {
+    console.warn(
+      `[api] VITE_API_URL points at ${baseUrl}. Sign-in cookies are SameSite=Lax, so they are ` +
+        'not sent cross-origin — remove the variable to use the Vite proxy instead.',
+    );
+  }
+
+  return baseUrl;
+};
+
 export const http: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  baseURL: resolveBaseUrl(),
   withCredentials: true,
   timeout: 30_000,
   headers: {

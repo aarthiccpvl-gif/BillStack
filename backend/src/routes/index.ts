@@ -9,6 +9,9 @@ import { itemsRouter } from '../modules/items/items.routes';
 import { templatesRouter } from '../modules/templates/templates.routes';
 import { filesRouter } from '../modules/files/files.routes';
 import { quotationsRouter } from '../modules/quotations/quotations.routes';
+import { invoicesRouter } from '../modules/invoices/invoices.routes';
+import { dashboardRouter, searchRouter } from '../modules/dashboard/dashboard.routes';
+import { downloadsRouter } from '../modules/downloads/downloads.routes';
 import { publicRouter } from '../modules/public/public.routes';
 import {
   authenticate,
@@ -50,8 +53,10 @@ apiRouter.use('/customers', ...guarded, customersRouter);
 apiRouter.use('/items', ...guarded, itemsRouter);
 apiRouter.use('/templates', ...guarded, templatesRouter);
 apiRouter.use('/quotations', ...guarded, quotationsRouter);
+apiRouter.use('/invoices', ...guarded, invoicesRouter);
 apiRouter.use('/files', ...guarded, filesRouter);
+apiRouter.use('/dashboard', ...guarded, dashboardRouter);
+apiRouter.use('/search', ...guarded, searchRouter);
+apiRouter.use('/export', ...guarded, downloadsRouter);
 
-/* Phase 6 → invoices
-   Phase 7 → dashboard, search
-   Phase 8 → reports, exports, audit-logs */
+/* Phase 8 → reports, spreadsheet exports, audit-logs */

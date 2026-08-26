@@ -1,6 +1,7 @@
 import {
   BarChart3,
   Building2,
+  FolderDown,
   FileText,
   LayoutDashboard,
   LayoutTemplate,
@@ -106,6 +107,13 @@ export const NAV_GROUPS: NavGroup[] = [
         permission: PERMISSIONS.TEMPLATE_READ,
         navPermission: PERMISSIONS.TEMPLATE_UPDATE,
         phase: 4,
+      },
+      {
+        label: 'Downloads',
+        to: '/downloads',
+        icon: FolderDown,
+        permission: PERMISSIONS.DOCUMENT_BULK_DOWNLOAD,
+        phase: 7,
       },
       {
         label: 'Reports',

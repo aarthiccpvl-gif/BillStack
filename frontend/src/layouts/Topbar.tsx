@@ -1,14 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { CircleUserRound, KeyRound, LogOut, Search, UserRound } from 'lucide-react';
+import { CircleUserRound, KeyRound, LogOut, UserRound } from 'lucide-react';
 import { ApiStatus } from '@/components/ApiStatus';
-import { SEARCH_PLACEHOLDER } from '@/constants/app';
+import { GlobalSearch } from '@/components/GlobalSearch';
 import { useAuth } from '@/app/AuthProvider';
 
-/**
- * Global search, environment status and the account menu. Search is wired up in
- * Phase 7, once there are documents to find.
- */
+/** Global search, environment status and the account menu. */
 export const Topbar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -22,22 +19,7 @@ export const Topbar = () => {
 
   return (
     <header className="app-topbar">
-      <div className="app-topbar__search">
-        <div className="input-group input-group-sm">
-          <span className="input-group-text bg-white border-end-0" id="global-search-icon">
-            <Search size={15} aria-hidden />
-          </span>
-          <input
-            type="search"
-            className="form-control border-start-0"
-            placeholder={SEARCH_PLACEHOLDER}
-            aria-label="Global search"
-            aria-describedby="global-search-icon"
-            disabled
-            title="Global search arrives in Phase 7"
-          />
-        </div>
-      </div>
+      <GlobalSearch />
 
       <div className="app-topbar__spacer" />
 

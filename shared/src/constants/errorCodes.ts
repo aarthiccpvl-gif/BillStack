@@ -15,6 +15,8 @@ export const ERROR_CODES = {
   DUPLICATE_DOCUMENT_NUMBER: 'DUPLICATE_DOCUMENT_NUMBER',
   INVALID_REFERENCE: 'INVALID_REFERENCE',
   INVALID_STATUS_TRANSITION: 'INVALID_STATUS_TRANSITION',
+  ALREADY_CONVERTED: 'ALREADY_CONVERTED',
+  CONVERSION_TOTAL_MISMATCH: 'CONVERSION_TOTAL_MISMATCH',
   BUSINESS_RULE_ERROR: 'BUSINESS_RULE_ERROR',
   IMMUTABLE_RESOURCE: 'IMMUTABLE_RESOURCE',
   CHANGE_REASON_REQUIRED: 'CHANGE_REASON_REQUIRED',
@@ -41,6 +43,9 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   DUPLICATE_DOCUMENT_NUMBER: 'That document number is already in use.',
   INVALID_REFERENCE: 'A referenced record does not exist.',
   INVALID_STATUS_TRANSITION: 'That status change is not allowed from the current status.',
+  ALREADY_CONVERTED: 'That quotation has already been converted to an invoice.',
+  CONVERSION_TOTAL_MISMATCH:
+    'The invoice would not total the same as the accepted quotation, so it was not created.',
   BUSINESS_RULE_ERROR: 'This action conflicts with a business rule.',
   IMMUTABLE_RESOURCE: 'This record can no longer be changed.',
   CHANGE_REASON_REQUIRED: 'A reason is required when changing an issued document.',

@@ -8,7 +8,8 @@ import { NotFoundError } from '../../utils/errors';
 import { prisma } from '../../db/prisma';
 import { getStorage } from '../../storage/storage.service';
 import { recordShareView, resolveShareToken } from '../../services/share.service';
-import { markViewedFromShare } from '../quotations/quotations.lifecycle';
+import { markViewedFromShare as markQuotationViewed } from '../quotations/quotations.lifecycle';
+import { markViewedFromShare as markInvoiceViewed } from '../invoices/invoices.lifecycle';
 import { isTest } from '../../config/env';
 
 /**
@@ -59,10 +60,10 @@ publicRouter.get(
     }
 
     await recordShareView(share.shareId);
-    if (share.entityType === 'QUOTATION') {
-      /* This is what makes the VIEWED status real rather than a manual claim. */
-      await markViewedFromShare(share.entityId);
-    }
+
+    /* This is what makes the VIEWED status real rather than a manual claim. */
+    if (share.entityType === 'QUOTATION') await markQuotationViewed(share.entityId);
+    if (share.entityType === 'INVOICE') await markInvoiceViewed(share.entityId);
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Length', String(file.sizeBytes));

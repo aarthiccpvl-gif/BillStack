@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import {
   PERMISSIONS,
+  convertQuotationSchema,
   createQuotationSchema,
   documentFiltersSchema,
   documentIdParamSchema,
@@ -24,6 +25,7 @@ import { requirePermission } from '../../middleware/authorize';
 import { recordAudit } from '../../services/audit.service';
 import { createShareLink, listShareLinks, revokeShareLink } from '../../services/share.service';
 import { getStorage } from '../../storage/storage.service';
+import { convertQuotationToInvoice } from '../invoices/conversion.service';
 import * as service from './quotations.service';
 import * as lifecycle from './quotations.lifecycle';
 
@@ -114,6 +116,31 @@ quotationsRouter.post(
   asyncHandler(async (req: Request, res: Response) => {
     const auth = getAuth(req);
     sendSuccess(res, await lifecycle.duplicateQuotation(idOf(res), auth.userId), { status: 201 });
+  }),
+);
+
+/**
+ * Conversion to an invoice.
+ *
+ * Lives on the quotation because that is the document the user is looking at when
+ * they decide the work is won; the invoice module owns what actually happens.
+ */
+quotationsRouter.post(
+  '/:id/convert',
+  requirePermission(PERMISSIONS.QUOTATION_CONVERT),
+  validateParams(idParam),
+  validateBody(convertQuotationSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const auth = getAuth(req);
+    sendSuccess(
+      res,
+      await convertQuotationToInvoice(
+        idOf(res),
+        parsedBody(req, convertQuotationSchema),
+        auth.userId,
+      ),
+      { status: 201 },
+    );
   }),
 );
 

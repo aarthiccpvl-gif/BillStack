@@ -1,12 +1,17 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Copy, Link2, MessageCircle, ShieldOff } from 'lucide-react';
-import { PERMISSIONS } from '@app/shared';
+import type { Permission, ShareLinkRecord } from '@app/shared';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/app/AuthProvider';
 import { ApiError } from '@/services/api-client';
-import { quotationKeys, quotationsApi } from '@/services/quotations-api';
 import { formatDateTime } from '@/utils/format';
+
+export interface ShareLinksApi {
+  shareLinks: (id: string) => Promise<ShareLinkRecord[]>;
+  createShareLink: (id: string, expiresInDays?: number) => Promise<ShareLinkRecord>;
+  revokeShareLink: (id: string, shareId: string) => Promise<unknown>;
+}
 
 /**
  * Secure share links (decision Q9).
@@ -26,11 +31,21 @@ import { formatDateTime } from '@/utils/format';
 
 const EXPIRY_CHOICES = [7, 14, 30, 60, 90] as const;
 
-export const ShareLinksPanel = ({ quotationId }: { quotationId: string }) => {
+export const ShareLinksPanel = ({
+  documentId,
+  api,
+  sharesKey,
+  sharePermission,
+}: {
+  documentId: string;
+  api: ShareLinksApi;
+  sharesKey: readonly unknown[];
+  sharePermission: Permission;
+}) => {
   const queryClient = useQueryClient();
   const toast = useToast();
   const { hasPermission } = useAuth();
-  const canShare = hasPermission(PERMISSIONS.QUOTATION_SHARE);
+  const canShare = hasPermission(sharePermission);
 
   const [expiresInDays, setExpiresInDays] = useState<number>(30);
   /** The one link whose address this browser still knows, from creating it. */
@@ -41,8 +56,8 @@ export const ShareLinksPanel = ({ quotationId }: { quotationId: string }) => {
   } | null>(null);
 
   const linksQuery = useQuery({
-    queryKey: quotationKeys.shares(quotationId),
-    queryFn: () => quotationsApi.shareLinks(quotationId),
+    queryKey: sharesKey,
+    queryFn: () => api.shareLinks(documentId),
   });
 
   const copy = async (url: string): Promise<boolean> => {
@@ -56,9 +71,9 @@ export const ShareLinksPanel = ({ quotationId }: { quotationId: string }) => {
   };
 
   const createMutation = useMutation({
-    mutationFn: () => quotationsApi.createShareLink(quotationId, expiresInDays),
+    mutationFn: () => api.createShareLink(documentId, expiresInDays),
     onSuccess: async (link) => {
-      await queryClient.invalidateQueries({ queryKey: quotationKeys.shares(quotationId) });
+      await queryClient.invalidateQueries({ queryKey: sharesKey });
       if (link.url) setFresh({ id: link.id, url: link.url, whatsappUrl: link.whatsappUrl });
 
       const copied = link.url ? await copy(link.url) : false;
@@ -72,9 +87,9 @@ export const ShareLinksPanel = ({ quotationId }: { quotationId: string }) => {
   });
 
   const revokeMutation = useMutation({
-    mutationFn: (shareId: string) => quotationsApi.revokeShareLink(quotationId, shareId),
+    mutationFn: (shareId: string) => api.revokeShareLink(documentId, shareId),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: quotationKeys.shares(quotationId) });
+      await queryClient.invalidateQueries({ queryKey: sharesKey });
       toast.success('Link revoked — it stops working immediately');
     },
     onError: (error: unknown) =>

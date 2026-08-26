@@ -67,3 +67,45 @@ body {
     transition-duration: 0.001ms !important;
   }
 }
+
+// ---------------------------------------------------------------------------
+// Dashboard chart. Hand-drawn SVG rather than a charting dependency, so the
+// colours live here with the rest of the theme instead of in a JS config.
+// ---------------------------------------------------------------------------
+.chart-gridline {
+  stroke: $gray-200;
+  stroke-width: 1;
+}
+
+.chart-bar {
+  transition: opacity 0.12s ease-in-out;
+
+  &:hover {
+    opacity: 0.75;
+  }
+}
+
+.chart-swatch {
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 2px;
+}
+
+.chart-bar--billed,
+.chart-swatch.chart-bar--billed {
+  fill: $primary;
+  background: $primary;
+}
+
+.chart-bar--received,
+.chart-swatch.chart-bar--received {
+  fill: $success;
+  background: $success;
+}
+
+.chart-bar--quoted,
+.chart-swatch.chart-bar--quoted {
+  fill: $gray-400;
+  background: $gray-400;
+}

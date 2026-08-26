@@ -1,12 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { History } from 'lucide-react';
-import { quotationKeys, quotationsApi } from '@/services/quotations-api';
+import type { DocumentRevisionRecord } from '@app/shared';
 import { formatDateTime } from '@/utils/format';
 
 /**
- * Revision history.
+ * Revision history, for quotations and invoices alike.
  *
- * An issued quotation can be changed (PRD §22) — what must never happen is the
+ * An issued document can be changed (PRD §22) — what must never happen is the
  * change going unrecorded. Every version keeps who changed it, when, why and
  * which fields moved; nothing is deleted, so the earlier figures remain provable.
  */
@@ -14,8 +14,11 @@ import { formatDateTime } from '@/utils/format';
 /** Field names as the document snapshot spells them, in the words a user reads. */
 const FIELD_LABELS: Record<string, string> = {
   customerId: 'customer',
-  documentDate: 'quotation date',
+  documentDate: 'document date',
   expiryDate: 'valid until',
+  dueDate: 'due date',
+  paymentTermsDays: 'payment terms',
+  amountPaid: 'amount received',
   referenceNumber: 'reference',
   subject: 'subject',
   currencyCode: 'currency',
@@ -44,10 +47,18 @@ const FIELD_LABELS: Record<string, string> = {
 
 const label = (field: string): string => FIELD_LABELS[field] ?? field;
 
-export const RevisionHistoryPanel = ({ quotationId }: { quotationId: string }) => {
+export const RevisionHistoryPanel = ({
+  documentId,
+  historyKey,
+  fetchHistory,
+}: {
+  documentId: string;
+  historyKey: readonly unknown[];
+  fetchHistory: (id: string) => Promise<DocumentRevisionRecord[]>;
+}) => {
   const query = useQuery({
-    queryKey: quotationKeys.history(quotationId),
-    queryFn: () => quotationsApi.history(quotationId),
+    queryKey: historyKey,
+    queryFn: () => fetchHistory(documentId),
   });
 
   const revisions = query.data ?? [];
@@ -66,7 +77,7 @@ export const RevisionHistoryPanel = ({ quotationId }: { quotationId: string }) =
 
         {!query.isLoading && revisions.length === 0 && (
           <p className="small text-secondary mb-0">
-            No revisions. A draft can be edited freely; once the quotation is sent, every change is
+            No revisions. A draft can be edited freely; once the document is issued, every change is
             recorded here with its reason.
           </p>
         )}

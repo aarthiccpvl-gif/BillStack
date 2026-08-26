@@ -60,6 +60,47 @@ export const QUOTATION_TRANSITIONS: Record<QuotationStatus, readonly QuotationSt
 export const quotationActions = (status: QuotationStatus): readonly QuotationStatus[] =>
   QUOTATION_TRANSITIONS[status].filter((next) => next !== 'CONVERTED');
 
+/**
+ * The invoice status machine.
+ *
+ * `OVERDUE` is absent on purpose: it is derived from the due date on every read,
+ * never written, so it cannot go stale in a row nobody has touched since.
+ *
+ * Cancel and void both keep the number and the record — nothing is ever deleted.
+ * The difference is when: cancel is for an invoice that should not have been
+ * raised, void is for one that was raised correctly and is being nullified after
+ * money was already in play.
+ */
+export type StoredInvoiceStatus = Exclude<InvoiceStatus, 'OVERDUE'>;
+
+export const STORED_INVOICE_STATUSES = INVOICE_STATUSES.filter(
+  (status): status is StoredInvoiceStatus => status !== 'OVERDUE',
+);
+
+export const INVOICE_TRANSITIONS: Record<StoredInvoiceStatus, readonly StoredInvoiceStatus[]> = {
+  DRAFT: ['ISSUED', 'CANCELLED'],
+  ISSUED: ['SENT', 'VIEWED', 'PARTIALLY_PAID', 'PAID', 'CANCELLED', 'VOID'],
+  SENT: ['VIEWED', 'PARTIALLY_PAID', 'PAID', 'CANCELLED', 'VOID'],
+  VIEWED: ['PARTIALLY_PAID', 'PAID', 'CANCELLED', 'VOID'],
+  PARTIALLY_PAID: ['PAID', 'VOID'],
+  PAID: ['VOID'],
+  CANCELLED: [],
+  VOID: [],
+};
+
+/** Statuses against which money may be recorded — an unissued invoice is not one. */
+export const PAYABLE_INVOICE_STATUSES: readonly StoredInvoiceStatus[] = [
+  'ISSUED',
+  'SENT',
+  'VIEWED',
+  'PARTIALLY_PAID',
+  'PAID',
+];
+
+/** True once an invoice is settled or written off, so it stops chasing a due date. */
+export const isInvoiceClosed = (status: StoredInvoiceStatus): boolean =>
+  status === 'PAID' || status === 'CANCELLED' || status === 'VOID' || status === 'DRAFT';
+
 /** Visual tone for a status badge. Never colour alone — the label always shows. */
 export type StatusTone = 'neutral' | 'info' | 'progress' | 'success' | 'warning' | 'danger';
 

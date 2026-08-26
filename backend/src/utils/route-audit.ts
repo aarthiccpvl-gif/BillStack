@@ -1,4 +1,5 @@
 import type { Express, RequestHandler } from 'express';
+import type { Permission } from '@app/shared';
 import { PERMISSION_TAG, type TaggedHandler } from '../middleware/authorize';
 import { logger } from '../utils/logger';
 
@@ -17,11 +18,18 @@ import { logger } from '../utils/logger';
 
 const MUTATING_METHODS = new Set(['post', 'put', 'patch', 'delete']);
 
-interface RouteInfo {
+export type RoutePermission = Permission | 'PUBLIC' | 'AUTHENTICATED';
+
+export interface RouteInfo {
   method: string;
   path: string;
   tagged: boolean;
+  /** The permission the route declares, when it declares one. */
+  permission?: RoutePermission;
 }
+
+/** Exposed so the RBAC matrix asks the same question the startup check does. */
+export const isMutating = (method: string): boolean => MUTATING_METHODS.has(method);
 
 interface ExpressLayer {
   name?: string;
@@ -56,12 +64,19 @@ const collect = (layers: ExpressLayer[], prefix: string, out: RouteInfo[]): void
         ? (layer.route.path[0] ?? '')
         : layer.route.path;
 
-      const tagged = layer.route.stack.some(
-        (entry) => (entry.handle as TaggedHandler)[PERMISSION_TAG] !== undefined,
-      );
+      const permission = layer.route.stack
+        .map((entry) => (entry.handle as TaggedHandler)[PERMISSION_TAG])
+        .find((value): value is RoutePermission => value !== undefined);
 
       for (const [method, enabled] of Object.entries(layer.route.methods)) {
-        if (enabled) out.push({ method, path: normalisePath(`${prefix}${routePath}`), tagged });
+        if (enabled) {
+          out.push({
+            method,
+            path: normalisePath(`${prefix}${routePath}`),
+            tagged: permission !== undefined,
+            ...(permission === undefined ? {} : { permission }),
+          });
+        }
       }
       continue;
     }

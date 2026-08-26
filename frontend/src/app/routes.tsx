@@ -15,6 +15,10 @@ import { TemplatesPage } from '@/modules/templates/TemplatesPage';
 import { QuotationsPage } from '@/modules/quotations/QuotationsPage';
 import { QuotationEditorPage } from '@/modules/quotations/QuotationEditorPage';
 import { QuotationDetailPage } from '@/modules/quotations/QuotationDetailPage';
+import { InvoicesPage } from '@/modules/invoices/InvoicesPage';
+import { InvoiceEditorPage } from '@/modules/invoices/InvoiceEditorPage';
+import { InvoiceDetailPage } from '@/modules/invoices/InvoiceDetailPage';
+import { DownloadsPage } from '@/modules/downloads/DownloadsPage';
 import { TemplateEditorPage } from '@/modules/templates/TemplateEditorPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { PhaseStub } from '@/components/PhaseStub';
@@ -76,22 +80,23 @@ export const AppRoutes = () => (
         element={guarded(PERMISSIONS.QUOTATION_UPDATE, <QuotationEditorPage />)}
       />
 
+      <Route path="invoices" element={guarded(PERMISSIONS.INVOICE_READ, <InvoicesPage />)} />
       <Route
-        path="invoices/*"
-        element={guarded(
-          PERMISSIONS.INVOICE_READ,
-          <PhaseStub
-            title="Invoices"
-            phase={6}
-            summary="Invoice list, editor and lifecycle, plus quotation conversion."
-            scope={[
-              'Everything the quotation module does, on the invoice status machine',
-              'Issue, cancel and void with a recorded reason',
-              'Due dates from payment terms, derived overdue state',
-              'Manual payment status and amount paid',
-            ]}
-          />,
-        )}
+        path="invoices/new"
+        element={guarded(PERMISSIONS.INVOICE_CREATE, <InvoiceEditorPage />)}
+      />
+      <Route
+        path="invoices/:id"
+        element={guarded(PERMISSIONS.INVOICE_READ, <InvoiceDetailPage />)}
+      />
+      <Route
+        path="invoices/:id/edit"
+        element={guarded(PERMISSIONS.INVOICE_UPDATE, <InvoiceEditorPage />)}
+      />
+
+      <Route
+        path="downloads"
+        element={guarded(PERMISSIONS.DOCUMENT_BULK_DOWNLOAD, <DownloadsPage />)}
       />
 
       <Route path="customers" element={guarded(PERMISSIONS.CUSTOMER_READ, <CustomersPage />)} />
@@ -100,12 +105,15 @@ export const AppRoutes = () => (
         element={guarded(PERMISSIONS.CUSTOMER_READ, <CustomerDetailPage />)}
       />
 
-      <Route path="items" element={guarded(PERMISSIONS.ITEM_READ, <ItemsPage />)} />
+      {/* Authoring screens are guarded on the permission that makes them useful,
+          not on the read that other screens need — so the route a Finance Viewer
+          cannot see in the sidebar is also one they cannot reach by typing it. */}
+      <Route path="items" element={guarded(PERMISSIONS.ITEM_CREATE, <ItemsPage />)} />
 
-      <Route path="templates" element={guarded(PERMISSIONS.TEMPLATE_READ, <TemplatesPage />)} />
+      <Route path="templates" element={guarded(PERMISSIONS.TEMPLATE_UPDATE, <TemplatesPage />)} />
       <Route
         path="templates/:id"
-        element={guarded(PERMISSIONS.TEMPLATE_READ, <TemplateEditorPage />)}
+        element={guarded(PERMISSIONS.TEMPLATE_UPDATE, <TemplateEditorPage />)}
       />
 
       <Route
@@ -125,10 +133,10 @@ export const AppRoutes = () => (
 
       <Route
         path="admin/company"
-        element={guarded(PERMISSIONS.COMPANY_READ, <CompanySettingsPage />)}
+        element={guarded(PERMISSIONS.COMPANY_UPDATE, <CompanySettingsPage />)}
       />
 
-      <Route path="admin/masters" element={guarded(PERMISSIONS.MASTER_READ, <MastersPage />)} />
+      <Route path="admin/masters" element={guarded(PERMISSIONS.MASTER_MANAGE, <MastersPage />)} />
 
       <Route
         path="admin/audit/*"

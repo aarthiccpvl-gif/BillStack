@@ -19,6 +19,8 @@ export * from './types/auth';
 export * from './types/masters';
 export * from './types/document';
 export * from './types/quotation';
+export * from './types/invoice';
+export * from './types/dashboard';
 export * from './types/business';
 
 /* schemas */
@@ -29,7 +31,9 @@ export * from './schemas/customer';
 export * from './schemas/item';
 export * from './schemas/masters';
 export * from './schemas/template';
+export * from './schemas/document';
 export * from './schemas/quotation';
+export * from './schemas/invoice';
 
 /* finance */
 export * from './finance/decimal';

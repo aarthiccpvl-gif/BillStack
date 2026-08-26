@@ -102,7 +102,7 @@ creates actually exists.
 
 ---
 
-## Phase 6 — Invoices & conversion
+## Phase 6 — Invoices & conversion  ✅ complete
 
 **Build:** invoices reusing every shared service (only the config/status/date differences are new);
 issue/cancel/void with mandatory reasons; due-date and payment-terms handling; derived `OVERDUE`;
@@ -115,9 +115,24 @@ setting `invoices.quotationId`, flipping the quotation to `CONVERTED` and back-l
 quotation cannot be converted twice; the invoice's number comes from the invoice series in the FY of
 the invoice date; the quotation detail page shows "Converted to FT018/2026-2027".
 
+**Verified:** 45/45 live checks against the real database (numbering from the invoice series, due
+dates from the customer's terms, ignored client-supplied totals, issue-once, change-reason
+enforcement, revisions with version 1 preserved, part payment → full payment → correction back to
+zero, cancel refused once money is recorded, void, derived overdue including the list filter, draft
+delete rules, HTML preview, PDF generation/caching, share links through the public route, the full
+conversion path and its refusals) plus a Finance Viewer pass showing read allowed and every write —
+conversion included — refused with 403. The whole path was then walked in a browser: accepted
+quotation → convert → issue → part payment → paid in full.
+
+**Deduplicated rather than copied:** the calculation, snapshotting and renderer-contract code is now
+shared by both document types (`modules/documents/prepare.service.ts`, `documents/document-data.ts`),
+and so is the seven-hundred-line editor (`DocumentEditor` + a per-type config). A quotation and an
+invoice differ in their dates, their status machine and their endpoints; they do not differ in how
+money is calculated, and now they cannot.
+
 ---
 
-## Phase 7 — Finance Viewer hardening
+## Phase 7 — Finance Viewer hardening  ✅ complete
 
 **Build:** dashboard (KPI cards, monthly value charts, conversion funnel, recent documents) with
 per-currency and base-currency roll-ups; Finance sidebar/routes; downloads workspace; bulk PDF ZIP;
@@ -126,6 +141,27 @@ per-currency and base-currency roll-ups; Finance sidebar/routes; downloads works
 **Exit criteria:** the automated matrix proves every write endpoint returns 403 for FINANCE_VIEWER and
 200 for the roles entitled to it; a Finance Viewer can complete view → filter → export → download
 end to end and can reach nothing else.
+
+**Verified:** the RBAC matrix enumerates all 110 mounted routes from the live router — not a
+hand-written list — and proves that no route demanding a business permission is reachable by a
+read-only role, that every route is reachable by somebody, that an Admin can run the day to day but
+not administer the system, and that all 110 refuse an unauthenticated caller with 401. Alongside it,
+31 live checks against the real database confirm the dashboard's arithmetic against a hand-computed
+book of business (five quotations across every status, invoices paid, part-paid, overdue and in two
+currencies), the funnel, search, the streamed ZIP, and a Finance Viewer completing
+view → filter → download → bulk download while being refused every write across every module.
+
+A 32-case frontend audit walks the navigation manifest for all three roles and proves the sidebar and
+the router agree: every entry a role can see it can open, and every entry hidden from it is refused
+with the 403 page rather than rendered.
+
+**Changed along the way:** four admin screens were reachable by typing their URL even though the
+sidebar hid them — `/items`, `/templates`, `/admin/company` and `/admin/masters` were guarded on their
+`*_READ` permission while the sidebar used the authoring one. They are now guarded on the same
+permission the sidebar uses, which is what the audit test above pins.
+
+**Deferred to Phase 8:** spreadsheet and PDF *report* exports (CSV/XLSX), the audit-log viewer and the
+daily expiry/overdue job. "Export" in this phase means the bulk PDF archive.
 
 ---
 
