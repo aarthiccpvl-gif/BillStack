@@ -327,9 +327,9 @@ model CompanySettings {
   sealFileId      BigInt? @map("seal_file_id")
   signatureLabel  String? @map("signature_label") @db.VarChar(120)
 
-  primaryColor   String @default("#0f5477") @map("primary_color") @db.VarChar(9)
-  secondaryColor String @default("#5e6f7c") @map("secondary_color") @db.VarChar(9)
-  defaultFont    String @default("Inter") @map("default_font") @db.VarChar(60)
+  primaryColor   String @default("#1b5e40") @map("primary_color") @db.VarChar(9)
+  secondaryColor String @default("#6b7770") @map("secondary_color") @db.VarChar(9)
+  defaultFont    String @default("Poppins") @map("default_font") @db.VarChar(60)
 
   baseCurrencyCode        String @default("INR") @map("base_currency_code") @db.Char(3)
   financialYearStartMonth Int    @default(4) @map("financial_year_start_month")

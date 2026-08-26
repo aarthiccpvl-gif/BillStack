@@ -12,6 +12,7 @@ import { quotationsRouter } from '../modules/quotations/quotations.routes';
 import { invoicesRouter } from '../modules/invoices/invoices.routes';
 import { dashboardRouter, searchRouter } from '../modules/dashboard/dashboard.routes';
 import { downloadsRouter } from '../modules/downloads/downloads.routes';
+import { auditRouter, exportsRouter, reportsRouter } from '../modules/reports/reports.routes';
 import { publicRouter } from '../modules/public/public.routes';
 import {
   authenticate,
@@ -58,5 +59,6 @@ apiRouter.use('/files', ...guarded, filesRouter);
 apiRouter.use('/dashboard', ...guarded, dashboardRouter);
 apiRouter.use('/search', ...guarded, searchRouter);
 apiRouter.use('/export', ...guarded, downloadsRouter);
-
-/* Phase 8 → reports, spreadsheet exports, audit-logs */
+apiRouter.use('/export', ...guarded, exportsRouter);
+apiRouter.use('/reports', ...guarded, reportsRouter);
+apiRouter.use('/audit-logs', ...guarded, auditRouter);

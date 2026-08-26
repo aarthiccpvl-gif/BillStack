@@ -203,6 +203,60 @@ export const RECENT = [
   },
 ];
 
+export const REPORT = {
+  kind: 'invoices',
+  title: 'Invoices',
+  columns: [
+    { key: 'number', label: 'Number' },
+    { key: 'customerName', label: 'Customer' },
+    { key: 'status', label: 'Status' },
+    { key: 'currencyCode', label: 'Currency' },
+    { key: 'grandTotal', label: 'Total', numeric: true },
+    { key: 'outstanding', label: 'Outstanding', numeric: true },
+  ],
+  rows: [
+    {
+      number: 'FT001/2026-2027',
+      customerName: 'Northwind Traders',
+      status: 'Partially paid',
+      currencyCode: 'INR',
+      grandTotal: '70800.00',
+      outstanding: '50800.00',
+    },
+  ],
+  totals: [
+    {
+      currencyCode: 'INR',
+      currencySymbol: '₹',
+      currencyDecimalPlaces: 2,
+      count: 1,
+      values: { grandTotal: '70800.00', outstanding: '50800.00' },
+    },
+  ],
+  meta: {
+    generatedAt: '2026-08-26T00:00:00.000Z',
+    rowCount: 1,
+    truncated: false,
+    filtersApplied: [],
+  },
+};
+
+export const AUDIT_ROWS = [
+  {
+    id: '55',
+    createdAt: '2026-08-26T09:15:00.000Z',
+    userName: 'Alex Admin',
+    userEmail: 'alex@example.com',
+    action: 'INVOICE_STATUS_CHANGED',
+    entityType: 'INVOICE',
+    entityId: '9',
+    entityLabel: 'FT001/2026-2027',
+    requestId: 'req-1',
+    ip: '10.0.0.9',
+    summary: 'Alex Admin changed the status of invoice FT001/2026-2027 (DRAFT → ISSUED)',
+  },
+];
+
 export const HEALTH = {
   status: 'ok',
   version: '0.1.0',
@@ -236,6 +290,15 @@ export const mockApi = (user: AuthUser, options: MockOptions = {}) => {
     if (url === '/dashboard/summary') return Promise.resolve(SUMMARY);
     if (url.startsWith('/dashboard/charts')) return Promise.resolve(CHARTS);
     if (url.startsWith('/dashboard/recent-documents')) return Promise.resolve(RECENT);
+    if (url.startsWith('/reports/')) return Promise.resolve(REPORT);
+    if (url.startsWith('/audit-logs/entry/')) {
+      return Promise.resolve({
+        ...AUDIT_ROWS[0],
+        previousData: { status: 'DRAFT' },
+        newData: { status: 'ISSUED' },
+        metadata: { reason: null },
+      });
+    }
     if (url.startsWith('/search')) {
       return Promise.resolve({ query: '', hits: options.hits ?? [], truncated: false });
     }
@@ -243,7 +306,9 @@ export const mockApi = (user: AuthUser, options: MockOptions = {}) => {
   }) as never);
 
   vi.spyOn(apiClientModule.apiClient, 'getPaginated').mockImplementation(((url: string) => {
-    const items = options.rows?.[url] ?? (url === '/customers' ? [CUSTOMER] : []);
+    const items =
+      options.rows?.[url] ??
+      (url === '/customers' ? [CUSTOMER] : url === '/audit-logs' ? AUDIT_ROWS : []);
 
     return Promise.resolve({
       items,

@@ -1,5 +1,7 @@
 import { FONT_STACKS, type TemplateConfig } from '@app/shared';
 
+import { fontFaceCss } from './fonts';
+
 /**
  * Template config → print CSS.
  *
@@ -75,6 +77,9 @@ const BASE_PRINT_CSS = `
 
   h1, h2, h3, p, table { margin: 0; }
   table { border-collapse: collapse; width: 100%; }
+
+  /* Label/value pairs: the gutter belongs to the label column, not to one row. */
+  table.kv td:first-child { padding-right: 4mm; }
 
   /* <address> is italic by default in every browser, which reads as an error on a
      printed invoice. */
@@ -191,4 +196,11 @@ const BASE_PRINT_CSS = `
 `;
 
 export const buildStylesheet = (config: TemplateConfig, layoutCss: string): string =>
-  `:root { ${themeVariables(config)} }\n${BASE_PRINT_CSS}\n${layoutCss}`;
+  [
+    fontFaceCss(config.typography.fontFamily),
+    `:root { ${themeVariables(config)} }`,
+    BASE_PRINT_CSS,
+    layoutCss,
+  ]
+    .filter(Boolean)
+    .join('\n');

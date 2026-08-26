@@ -35,6 +35,7 @@ const Kpi = ({
   tone,
   icon: Icon,
   to,
+  feature = false,
 }: {
   label: string;
   value: string;
@@ -42,16 +43,18 @@ const Kpi = ({
   tone?: 'danger' | 'success';
   icon: typeof FileText;
   to?: string;
+  /** The one headline figure on the screen, set on the dark card. */
+  feature?: boolean;
 }) => {
   const body = (
-    <div className="card h-100">
+    <div className={`card h-100${feature ? ' card--feature' : ''}`}>
       <div className="card-body">
         <div className="d-flex align-items-center gap-2 label-caps mb-1">
           <Icon size={14} aria-hidden />
           {label}
         </div>
-        <div className={`fs-4 fw-semibold text-numeric${tone ? ` text-${tone}` : ''}`}>{value}</div>
-        {hint && <div className="small text-secondary mt-1">{hint}</div>}
+        <div className={`kpi-value${tone ? ` text-${tone}` : ''}`}>{value}</div>
+        {hint && <div className={`small mt-1${feature ? '' : ' text-secondary'}`}>{hint}</div>}
       </div>
     </div>
   );
@@ -216,6 +219,7 @@ export const DashboardPage = () => {
             hint={`${summary?.invoices.total ?? 0} invoice${summary?.invoices.total === 1 ? '' : 's'} this year`}
             icon={Banknote}
             to="/invoices"
+            feature
           />
         </div>
         <div className="col-6 col-xl-3">

@@ -1,6 +1,6 @@
-import { NavLink } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { NAV_GROUPS, navVisibilityPermission } from '@/constants/navigation';
-import { APP_SHORT_NAME, APP_TITLE } from '@/constants/app';
+import { Logo } from '@/components/Logo';
 import { useAuth } from '@/app/AuthProvider';
 
 /**
@@ -18,12 +18,9 @@ export const Sidebar = () => {
 
   return (
     <aside className="app-sidebar">
-      <div className="app-sidebar__brand">
-        <span className="app-sidebar__mark" aria-hidden>
-          {APP_SHORT_NAME}
-        </span>
-        <span>{APP_TITLE}</span>
-      </div>
+      <Link to="/" className="app-sidebar__brand">
+        <Logo size={30} />
+      </Link>
 
       <nav className="app-sidebar__nav" aria-label="Main navigation">
         {groups.map((group, groupIndex) => (

@@ -38,8 +38,6 @@ export interface NavItem {
   permission: Permission;
   /** Permission that makes this entry visible; defaults to `permission`. */
   navPermission?: Permission;
-  /** The phase that makes this item functional; used by the placeholder pages. */
-  phase: number;
 }
 
 export interface NavGroup {
@@ -55,7 +53,6 @@ export const NAV_GROUPS: NavGroup[] = [
         to: '/',
         icon: LayoutDashboard,
         permission: PERMISSIONS.DASHBOARD_READ,
-        phase: 7,
       },
     ],
   },
@@ -67,14 +64,12 @@ export const NAV_GROUPS: NavGroup[] = [
         to: '/quotations',
         icon: FileText,
         permission: PERMISSIONS.QUOTATION_READ,
-        phase: 5,
       },
       {
         label: 'Invoices',
         to: '/invoices',
         icon: ReceiptText,
         permission: PERMISSIONS.INVOICE_READ,
-        phase: 6,
       },
     ],
   },
@@ -86,7 +81,6 @@ export const NAV_GROUPS: NavGroup[] = [
         to: '/customers',
         icon: Users,
         permission: PERMISSIONS.CUSTOMER_READ,
-        phase: 3,
       },
       {
         label: 'Products & Services',
@@ -94,7 +88,6 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: Package,
         permission: PERMISSIONS.ITEM_READ,
         navPermission: PERMISSIONS.ITEM_CREATE,
-        phase: 3,
       },
     ],
   },
@@ -106,21 +99,18 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: LayoutTemplate,
         permission: PERMISSIONS.TEMPLATE_READ,
         navPermission: PERMISSIONS.TEMPLATE_UPDATE,
-        phase: 4,
       },
       {
         label: 'Downloads',
         to: '/downloads',
         icon: FolderDown,
         permission: PERMISSIONS.DOCUMENT_BULK_DOWNLOAD,
-        phase: 7,
       },
       {
         label: 'Reports',
         to: '/reports',
         icon: BarChart3,
         permission: PERMISSIONS.REPORT_READ,
-        phase: 8,
       },
       {
         /* PRD §5.3 grants the Finance Viewer "view audit history", so this sits
@@ -129,7 +119,6 @@ export const NAV_GROUPS: NavGroup[] = [
         to: '/admin/audit',
         icon: ScrollText,
         permission: PERMISSIONS.AUDIT_READ,
-        phase: 8,
       },
     ],
   },
@@ -141,7 +130,6 @@ export const NAV_GROUPS: NavGroup[] = [
         to: '/admin/users',
         icon: UsersRound,
         permission: PERMISSIONS.USER_READ,
-        phase: 2,
       },
       {
         label: 'Company Settings',
@@ -149,7 +137,6 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: Building2,
         permission: PERMISSIONS.COMPANY_READ,
         navPermission: PERMISSIONS.COMPANY_UPDATE,
-        phase: 3,
       },
       {
         label: 'Masters & Numbering',
@@ -157,7 +144,6 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: Settings2,
         permission: PERMISSIONS.MASTER_READ,
         navPermission: PERMISSIONS.MASTER_MANAGE,
-        phase: 3,
       },
     ],
   },

@@ -28,7 +28,7 @@ export const panSchema = z
 export const hexColorSchema = z
   .string()
   .trim()
-  .regex(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, 'Use a hex colour such as #0F5477');
+  .regex(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, 'Use a hex colour such as #1B5E40');
 
 export const updateCompanySchema = z.object({
   companyName: z.string().trim().min(2, 'Company name is required').max(200).optional(),

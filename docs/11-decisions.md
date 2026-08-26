@@ -258,3 +258,63 @@ Three series of twelve bars does not justify a charting dependency. Drawing it d
 figures formatted by the same `formatMoney` as the rest of the application, keeps the colours in the
 SCSS theme rather than a JavaScript config, and lets the accessible version be a real table of the
 same numbers rather than an alt attribute.
+
+---
+
+# Decisions made while building Phase 8
+
+## 20. One report definition, four renderers
+
+A report is defined once — its columns, its `where` clause, and how a row becomes cells. The screen,
+the CSV, the spreadsheet and the PDF all read that definition. There is deliberately no second query
+for exporting, which is what makes "the export contains exactly what the list showed" a property of
+the code rather than a promise that has to be kept true by hand.
+
+Rows come out of an async generator, so an export walks the whole filtered set a page at a time and
+never holds more than one page in memory. Five thousand invoices exported with the first bytes on the
+wire at 206 ms of a 2.7 second total.
+
+## 21. Money leaves a report raw
+
+The definition emits `94400.00`, not `₹94,400.00` and not `94,400.00`. Each renderer then decides:
+
+- the screen and the PDF group it by the **row's own currency**, because ₹1,23,900 and $123,900 do
+  not group the same way
+- the spreadsheet writes a real number, so a column-sum in Excel works
+- the CSV leaves it exactly as it is, so whatever imports it next does not have to strip commas
+
+Before this, the rows were grouped and the totals row underneath them was not — the same column
+disagreeing with itself.
+
+## 22. A cell that starts with `=` is defused
+
+A subject line reading `=cmd|calc` is a formula the moment a spreadsheet opens the CSV. Any cell
+starting with `=`, `+`, `-` or `@` is prefixed with an apostrophe on the way out. It is the export's
+job to be safe to open, not the user's job to avoid typing an equals sign.
+
+## 23. The PDF is capped; CSV and XLSX are not
+
+A PDF of fifty thousand rows is not a document anyone wants, so the report PDF stops at 2,000 rows —
+and says so on the page, naming the formats that carry the rest. Truncating quietly would be the
+worse failure: a total that does not match the table above it, with nothing to explain why.
+
+## 24. The audit trail is a report
+
+Exporting the trail is the same job as exporting any other list, so it became a report definition and
+reuses the CSV, XLSX and PDF writers rather than growing a fourth export path. Its filters map onto
+the shared report shape, which is why an action arrives as `status` on the export endpoint.
+
+The viewer renders each row as a sentence — "Alex Admin changed the status of invoice FT001/2026-2027
+(DRAFT → ISSUED)" — with the recorded before and after available underneath. The table remains
+append-only; nothing in the application writes to it except the audit service, and nothing reads it
+except this module.
+
+## 25. The daily job stamps quotations and leaves invoices alone
+
+`EXPIRED` is a real, stored quotation status a user can act on and move out of, so something has to
+write it. `OVERDUE` is not: it is derived from the due date on every read, which is why an invoice is
+correct on a Monday whether or not anything ran over the weekend.
+
+The job is an in-process timer rather than a cron entry. This is a single-instance internal
+application, and an operations story that needs a second moving part to keep a status accurate is a
+worse trade than a timer that catches up 30 seconds after boot.

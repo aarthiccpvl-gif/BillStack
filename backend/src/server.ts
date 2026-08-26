@@ -2,12 +2,14 @@ import { createApp } from './app';
 import { APP_NAME, APP_VERSION } from './config/app-info';
 import { env } from './config/env';
 import { disconnectDatabase } from './db/prisma';
+import { startDailyJob, stopDailyJob } from './jobs/daily.job';
 import { logger } from './utils/logger';
 
 process.env.TZ = env.TZ;
 
 const app = createApp();
 const server = app.listen(env.PORT, () => {
+  startDailyJob();
   logger.info(
     { port: env.PORT, env: env.NODE_ENV, tz: env.TZ },
     `${APP_NAME} v${APP_VERSION} listening on ${env.APP_URL}`,
@@ -23,6 +25,8 @@ const shutdown = (signal: string): void => {
     process.exit(1);
   }, 10_000);
   forceExit.unref();
+
+  stopDailyJob();
 
   /* Give in-flight requests a moment, then drop whatever is still connected. */
   const dropLingering = setTimeout(() => server.closeAllConnections(), 3_000);

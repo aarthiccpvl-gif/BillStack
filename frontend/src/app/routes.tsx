@@ -19,9 +19,10 @@ import { InvoicesPage } from '@/modules/invoices/InvoicesPage';
 import { InvoiceEditorPage } from '@/modules/invoices/InvoiceEditorPage';
 import { InvoiceDetailPage } from '@/modules/invoices/InvoiceDetailPage';
 import { DownloadsPage } from '@/modules/downloads/DownloadsPage';
+import { ReportsPage } from '@/modules/reports/ReportsPage';
+import { AuditLogPage } from '@/modules/audit/AuditLogPage';
 import { TemplateEditorPage } from '@/modules/templates/TemplateEditorPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
-import { PhaseStub } from '@/components/PhaseStub';
 import { RedirectIfAuthenticated, RequireAuth, RequirePermission } from '@/guards/RouteGuards';
 
 /** Wraps a route element in the permission it requires. */
@@ -116,18 +117,7 @@ export const AppRoutes = () => (
         element={guarded(PERMISSIONS.TEMPLATE_UPDATE, <TemplateEditorPage />)}
       />
 
-      <Route
-        path="reports/*"
-        element={guarded(
-          PERMISSIONS.REPORT_READ,
-          <PhaseStub
-            title="Reports"
-            phase={8}
-            summary="Quotation, invoice, customer and monthly summary reports."
-            scope={['CSV, XLSX and PDF export that honours the active filters exactly']}
-          />,
-        )}
-      />
+      <Route path="reports" element={guarded(PERMISSIONS.REPORT_READ, <ReportsPage />)} />
 
       <Route path="admin/users/*" element={guarded(PERMISSIONS.USER_READ, <AdminUsersPage />)} />
 
@@ -138,18 +128,7 @@ export const AppRoutes = () => (
 
       <Route path="admin/masters" element={guarded(PERMISSIONS.MASTER_MANAGE, <MastersPage />)} />
 
-      <Route
-        path="admin/audit/*"
-        element={guarded(
-          PERMISSIONS.AUDIT_READ,
-          <PhaseStub
-            title="Audit Logs"
-            phase={8}
-            summary="Append-only record of every action, filterable by user, action and entity."
-            scope={['Sign-ins, failed sign-ins and permission changes are already being recorded']}
-          />,
-        )}
-      />
+      <Route path="admin/audit" element={guarded(PERMISSIONS.AUDIT_READ, <AuditLogPage />)} />
 
       <Route path="*" element={<NotFoundPage />} />
     </Route>

@@ -4,15 +4,15 @@ An internal web application for creating, managing, rendering and sharing profes
 **quotations and invoices**. Single company, multi-currency, GST-aware, with full revision and
 audit history.
 
-> **Status: Phase 7 complete — the whole billing loop, plus the dashboard.** Raise a quotation,
-> number it `QT001/2026-2027`, work in any of ten currencies, see GST broken into its components as
-> you type, render it through the same engine the PDF uses, share it as a link that expires, convert
-> it to `FT001/2026-2027` with every figure carried across, record what has been paid, and watch it
-> fall overdue on its own. The dashboard adds up what is owed and what is late — per currency, where
-> the figures are exact, and rolled up at the rate each document recorded. Global search finds any of
-> it; the downloads workspace takes a filtered set away as one archive. Reports, spreadsheet exports
-> and the audit-log viewer are next, in Phase 8. See [docs/09-roadmap.md](docs/09-roadmap.md) for what
-> lands when and [docs/11-decisions.md](docs/11-decisions.md) for the decisions that shaped it.
+> **Status: complete — all eight phases.** Raise a quotation, number it `QT001/2026-2027`, work in
+> any of ten currencies, see GST broken into its components as you type, render it through the same
+> engine the PDF uses, share it as a link that expires, convert it to `FT001/2026-2027` with every
+> figure carried across, record what has been paid, and watch it fall overdue on its own. The
+> dashboard adds up what is owed and what is late; reports answer the same questions over a date
+> range and export as CSV, Excel or PDF containing exactly what the screen showed. Every action is on
+> the audit trail, which can be read as sentences and exported like any other report. See
+> [docs/09-roadmap.md](docs/09-roadmap.md) for what each phase delivered and
+> [docs/11-decisions.md](docs/11-decisions.md) for the decisions that shaped it.
 
 ---
 

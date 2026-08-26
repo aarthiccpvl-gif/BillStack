@@ -3,6 +3,16 @@
 // Import order matters: functions → our tokens → Bootstrap → our components.
 // ---------------------------------------------------------------------------
 
+// Poppins, self-hosted through @fontsource: no CDN request, so the application
+// looks the same offline and needs no font-src exception in the CSP.
+//
+// The latin subsets only. The full package also ships devanagari, which is
+// four more files this interface will never render a glyph from.
+@import "@fontsource/poppins/latin-400.css";
+@import "@fontsource/poppins/latin-500.css";
+@import "@fontsource/poppins/latin-600.css";
+@import "@fontsource/poppins/latin-700.css";
+
 @import "bootstrap/scss/functions";
 @import "variables";
 @import "bootstrap/scss/bootstrap";

@@ -165,7 +165,7 @@ daily expiry/overdue job. "Export" in this phase means the bulk PDF archive.
 
 ---
 
-## Phase 8 — Reports, exports & audit
+## Phase 8 — Reports, exports & audit  ✅ complete
 
 **Build:** quotation / invoice / customer / monthly-summary reports with the PRD's filters and
 columns; CSV, XLSX (styled, formatted numbers, frozen header) and PDF report exports that honour the
@@ -175,6 +175,20 @@ export; the expiry/overdue daily job.
 **Exit criteria:** an export of a filtered list contains exactly the rows the list showed; a 5,000-row
 export streams without exhausting memory; audit entries exist for `REPORT_EXPORTED`,
 `DOCUMENT_DOWNLOADED` and `BULK_DOWNLOAD`.
+
+**Verified:** 33/33 live checks against the real database. The export criterion is structural rather
+than tested-by-hand — the screen and all three formats read one report definition, and the check
+compares the exported rows against the rows the report returned for the same filters, in order. Five
+thousand invoices exported as 532 KB of CSV with the first bytes arriving at 206 ms of a 2,720 ms
+total, which is streaming rather than buffering; the same set produced a 311 KB spreadsheet. All
+three audit actions were found, one document's whole story read back in order, and the daily job
+stamped a lapsed quotation `EXPIRED`.
+
+**Also true of the design:** money leaves the report raw and each renderer formats it — the screen
+and the PDF group it by the row's own currency, the spreadsheet turns it into a real number a
+column-sum can work on, and the CSV leaves it ungrouped so whatever imports it next does not have to
+strip commas. A cell beginning `=` is prefixed with an apostrophe, so a crafted subject line cannot
+become a formula in someone's spreadsheet.
 
 ---
 

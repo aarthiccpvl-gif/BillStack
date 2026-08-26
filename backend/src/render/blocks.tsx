@@ -295,12 +295,12 @@ export const BankBlock = ({ data, config }: BlockProps) => {
   return (
     <div className="section block">
       <div className="label">Payment details</div>
-      <table style={{ width: 'auto' }}>
+      {/* `kv` puts the gutter on the label column: an inline style on the first
+          row only leaves the longest label touching its value. */}
+      <table className="kv" style={{ width: 'auto' }}>
         <tbody>
           <tr>
-            <td className="muted" style={{ paddingRight: '4mm' }}>
-              Bank
-            </td>
+            <td className="muted">Bank</td>
             <td>{bank.bankName}</td>
           </tr>
           <tr>

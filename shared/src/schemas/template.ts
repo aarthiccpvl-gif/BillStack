@@ -12,16 +12,20 @@ import { z } from 'zod';
 const hexColor = z
   .string()
   .trim()
-  .regex(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, 'Use a hex colour such as #0F5477');
+  .regex(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, 'Use a hex colour such as #1B5E40');
 
 /**
  * Font stacks rather than arbitrary names.
  *
- * Each maps to faces present on both a Windows developer machine and the Linux
- * container (via fonts-liberation / fonts-dejavu), so a document does not reflow
- * depending on where the PDF was produced.
+ * `sans`, `serif` and `narrow` map to faces present on both a Windows developer
+ * machine and the Linux container (via fonts-liberation / fonts-dejavu), so a
+ * document does not reflow depending on where the PDF was produced. `poppins`
+ * is the application's own face and is not installed anywhere: the renderer
+ * embeds it in the stylesheet (see backend/src/render/fonts.ts), which buys the
+ * same guarantee at the cost of ~21 KB per document.
  */
 export const FONT_FAMILIES = {
+  POPPINS: 'poppins',
   SANS: 'sans',
   SERIF: 'serif',
   NARROW: 'narrow',
@@ -30,12 +34,14 @@ export const FONT_FAMILIES = {
 export type FontFamilyKey = (typeof FONT_FAMILIES)[keyof typeof FONT_FAMILIES];
 
 export const FONT_STACKS: Record<FontFamilyKey, string> = {
+  poppins: "'Poppins', 'Liberation Sans', Arial, Helvetica, sans-serif",
   sans: "'Liberation Sans', Arial, Helvetica, 'DejaVu Sans', sans-serif",
   serif: "'Liberation Serif', 'Times New Roman', Times, 'DejaVu Serif', serif",
   narrow: "'Liberation Sans Narrow', 'Arial Narrow', 'Liberation Sans', Arial, sans-serif",
 };
 
 export const FONT_LABELS: Record<FontFamilyKey, string> = {
+  poppins: 'Poppins',
   sans: 'Sans serif',
   serif: 'Serif',
   narrow: 'Narrow sans',
@@ -87,13 +93,13 @@ export const templateConfigSchema = z
         widthMm: z.number().min(15).max(80).default(38),
       }),
       colors: z.object({
-        primary: hexColor.default('#0F5477'),
-        secondary: hexColor.default('#5E6F7C'),
-        text: hexColor.default('#121B23'),
-        muted: hexColor.default('#5E6F7C'),
-        border: hexColor.default('#D9E1E7'),
-        tableHeaderBg: hexColor.default('#EDF1F4'),
-        tableHeaderText: hexColor.default('#121B23'),
+        primary: hexColor.default('#1B5E40'),
+        secondary: hexColor.default('#6B7770'),
+        text: hexColor.default('#131C17'),
+        muted: hexColor.default('#6B7770'),
+        border: hexColor.default('#D8DED6'),
+        tableHeaderBg: hexColor.default('#EDF3E7'),
+        tableHeaderText: hexColor.default('#131C17'),
       }),
       /** Authorised signature image (decision Q13). */
       signature: z.object({
@@ -111,8 +117,13 @@ export const templateConfigSchema = z
 
     typography: z.object({
       fontFamily: z
-        .enum([FONT_FAMILIES.SANS, FONT_FAMILIES.SERIF, FONT_FAMILIES.NARROW])
-        .default('sans'),
+        .enum([
+          FONT_FAMILIES.POPPINS,
+          FONT_FAMILIES.SANS,
+          FONT_FAMILIES.SERIF,
+          FONT_FAMILIES.NARROW,
+        ])
+        .default('poppins'),
       baseSizePt: z.number().min(7).max(12).default(9),
       headingSizePt: z.number().min(12).max(28).default(19),
       tableSizePt: z.number().min(6).max(11).default(8.5),

@@ -12,6 +12,16 @@ body,
 body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  letter-spacing: -0.005em; // Poppins sets a touch wide at UI sizes
+}
+
+// Headings tighten as they grow, which is what stops a geometric sans from
+// looking like a poster at 24px.
+h1,
+h2,
+h3,
+.page-title {
+  letter-spacing: -0.02em;
 }
 
 // Every column of digits lines up: amounts, quantities, rates, document numbers.
@@ -19,6 +29,7 @@ body {
 .table td.text-numeric,
 .table th.text-numeric {
   font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
   text-align: right;
   white-space: nowrap;
 }
@@ -44,19 +55,158 @@ body {
 }
 
 .page-title {
-  font-size: 1.375rem;
+  font-size: 1.5rem;
   font-weight: 600;
   margin: 0;
 }
 
+// ---------------------------------------------------------------------------
+// Surfaces. A card is paper: white, generously rounded, separated by a hairline
+// and the faintest lift rather than a drop shadow.
+// ---------------------------------------------------------------------------
 .card {
-  box-shadow: 0 1px 2px rgba($gray-900, 0.04);
+  box-shadow: $app-shadow-sm;
+  border-color: $card-border-color;
+}
+
+.card-header {
+  border-bottom-color: $gray-200;
+  padding-top: 0.875rem;
+  padding-bottom: 0.875rem;
+}
+
+.card-footer {
+  border-top-color: $gray-200;
+}
+
+// A dark card, as on the reference dashboard: used for the one panel on a screen
+// that should read as a statement rather than as data.
+.card--feature {
+  background: linear-gradient(150deg, $dark 0%, #123a26 100%);
+  border-color: transparent;
+  color: rgba($white, 0.82);
+
+  .card-header,
+  .card-footer {
+    border-color: rgba($white, 0.12);
+  }
+
+  .label-caps {
+    color: rgba($white, 0.55);
+  }
+
+  h1,
+  h2,
+  h3,
+  .fw-semibold,
+  strong {
+    color: $white;
+  }
+
+  // The headline figure is the reason this card is dark: give it the accent.
+  .kpi-value {
+    color: $accent;
+  }
+}
+
+.table {
+  --bs-table-hover-bg: #{$gray-100};
+
+  > :not(caption) > * > * {
+    border-bottom-color: $gray-200;
+  }
+
+  thead th {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: $gray-600;
+    background: $white;
+  }
 }
 
 // Data tables scroll sideways rather than reflowing into cards: finance users
 // compare columns, so preserving the grid matters more than fitting the width.
 .table-scroll {
   overflow-x: auto;
+}
+
+// ---------------------------------------------------------------------------
+// Controls
+// ---------------------------------------------------------------------------
+.btn {
+  --bs-btn-padding-y: 0.4375rem;
+  --bs-btn-padding-x: 0.875rem;
+}
+
+.btn-primary {
+  --bs-btn-bg: #{$primary};
+  --bs-btn-border-color: #{$primary};
+  --bs-btn-hover-bg: #{darken($primary, 5%)};
+  --bs-btn-hover-border-color: #{darken($primary, 5%)};
+  --bs-btn-active-bg: #{darken($primary, 9%)};
+}
+
+// The one place the lime is a background: a call to action that should look
+// like the brand rather than like every other button.
+.btn-accent {
+  --bs-btn-color: #{$gray-900};
+  --bs-btn-bg: #{$accent};
+  --bs-btn-border-color: #{$accent};
+  --bs-btn-hover-color: #{$gray-900};
+  --bs-btn-hover-bg: #{$accent-strong};
+  --bs-btn-hover-border-color: #{$accent-strong};
+  --bs-btn-focus-shadow-rgb: 156, 204, 60;
+  font-weight: 500;
+}
+
+.form-control,
+.form-select {
+  border-radius: $border-radius;
+}
+
+.form-control:focus,
+.form-select:focus {
+  box-shadow: 0 0 0 3px $input-btn-focus-color;
+}
+
+.form-switch .form-check-input:checked {
+  background-color: $primary;
+  border-color: $primary;
+}
+
+// Tabs, as used by the reports screen.
+.nav-tabs {
+  border-bottom: 1px solid $gray-200;
+  gap: 0.25rem;
+
+  .nav-link {
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    color: $gray-600;
+    font-weight: 500;
+    padding: 0.5rem 0.875rem;
+
+    &:hover {
+      color: $gray-900;
+      border-bottom-color: $gray-300;
+    }
+
+    &.active {
+      color: $primary;
+      background: transparent;
+      border-bottom-color: $accent;
+    }
+  }
+}
+
+// Status badges keep their tone but sit on a tinted ground rather than a solid
+// block, so a table of them reads as data instead of as a traffic light.
+.badge {
+  padding: 0.35em 0.7em;
+  font-size: 0.75rem;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -89,7 +239,7 @@ body {
   display: inline-block;
   width: 0.65rem;
   height: 0.65rem;
-  border-radius: 2px;
+  border-radius: 3px;
 }
 
 .chart-bar--billed,
@@ -100,12 +250,12 @@ body {
 
 .chart-bar--received,
 .chart-swatch.chart-bar--received {
-  fill: $success;
-  background: $success;
+  fill: $accent;
+  background: $accent;
 }
 
 .chart-bar--quoted,
 .chart-swatch.chart-bar--quoted {
-  fill: $gray-400;
-  background: $gray-400;
+  fill: $gray-300;
+  background: $gray-300;
 }
