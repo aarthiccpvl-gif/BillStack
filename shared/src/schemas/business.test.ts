@@ -29,6 +29,50 @@ describe('GSTIN and PAN', () => {
 });
 
 describe('customer rules', () => {
+  /*
+   * A form's empty value for a cleared field is `null`, not `undefined` — so an
+   * optional field that only tolerates `undefined` rejects the customer form's
+   * own defaults. Worse, that failure stops the object-level `.refine()` from
+   * running at all, so the "needs a GSTIN" message below never reaches the user.
+   */
+  it('treats null, an empty string and a missing key alike for an optional PAN', () => {
+    for (const pan of [null, undefined, '']) {
+      const result = createCustomerSchema.safeParse({ ...validCustomer, pan });
+      expect(result.success).toBe(true);
+      if (result.success) expect(result.data.pan).toBeNull();
+    }
+  });
+
+  it('still rejects a PAN that is present and malformed', () => {
+    expect(createCustomerSchema.safeParse({ ...validCustomer, pan: 'NOPE' }).success).toBe(false);
+  });
+
+  it('accepts a null GSTIN when the treatment does not require one', () => {
+    const result = createCustomerSchema.safeParse({
+      name: 'Overseas Buyer LLC',
+      taxTreatment: 'OVERSEAS',
+      gstin: null,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('keeps a billing address that arrives with real booleans', () => {
+    const result = createCustomerSchema.safeParse({
+      ...validCustomer,
+      addresses: [{ type: 'BILLING', isDefault: true, city: 'Bengaluru' }],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects an address whose isDefault arrived as a string', () => {
+    /* Exactly what a hidden `<input value="true">` hands back. */
+    const result = createCustomerSchema.safeParse({
+      ...validCustomer,
+      addresses: [{ type: 'BILLING', isDefault: 'true', city: 'Bengaluru' }],
+    });
+    expect(result.success).toBe(false);
+  });
+
   it('requires a GSTIN for a registered business', () => {
     const result = createCustomerSchema.safeParse({
       name: 'No GST Co',

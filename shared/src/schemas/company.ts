@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { optionalEmail, optionalText } from './common';
+import { optionalEmail, optionalPattern, optionalText } from './common';
 
 /**
  * Company profile and branding.
@@ -50,14 +50,8 @@ export const updateCompanySchema = z.object({
   phone: optionalText(40),
   email: optionalEmail,
   website: optionalText(190),
-  gstin: gstinSchema
-    .optional()
-    .or(z.literal(''))
-    .transform((v) => (v === '' ? null : (v ?? null))),
-  pan: panSchema
-    .optional()
-    .or(z.literal(''))
-    .transform((v) => (v === '' ? null : (v ?? null))),
+  gstin: optionalPattern(gstinSchema),
+  pan: optionalPattern(panSchema),
   cin: optionalText(30),
   primaryColor: hexColorSchema.optional(),
   secondaryColor: hexColorSchema.optional(),

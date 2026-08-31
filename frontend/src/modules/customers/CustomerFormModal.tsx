@@ -7,6 +7,7 @@ import {
   TAX_TREATMENT_LABELS,
   createCustomerSchema,
   type CreateCustomerInput,
+  type CustomerAddressInput,
   type CustomerRecord,
 } from '@app/shared';
 import { Field, FieldGroup, describedBy, inputClass, selectClass } from '@/components/form';
@@ -14,6 +15,40 @@ import { useToast } from '@/components/Toast';
 import { ApiError } from '@/services/api-client';
 import { customerKeys, customersApi } from '@/services/business-api';
 import { useCurrencies } from '@/hooks/useMasters';
+
+/**
+ * The one address this form edits.
+ *
+ * `type` and `isDefault` are constants of the "Billing address" fieldset rather
+ * than anything the user chooses, so they live in the form's own state. They must
+ * not be smuggled in through hidden inputs: a hidden input hands back the *string*
+ * `"true"`, which `z.boolean()` rejects — and since neither field has a visible
+ * error slot, the rejection would leave the Create button looking dead.
+ */
+const emptyAddress = (): CustomerAddressInput => ({
+  type: 'BILLING',
+  label: null,
+  line1: null,
+  line2: null,
+  city: null,
+  state: null,
+  stateCode: null,
+  country: 'India',
+  postalCode: null,
+  isDefault: true,
+});
+
+/** True when nothing was actually entered, so no empty address row is stored. */
+const isBlankAddress = (address: CustomerAddressInput | undefined): boolean =>
+  !address ||
+  !(
+    address.line1 ||
+    address.line2 ||
+    address.city ||
+    address.state ||
+    address.stateCode ||
+    address.postalCode
+  );
 
 const emptyValues: CreateCustomerInput = {
   customerCode: null,
@@ -31,7 +66,7 @@ const emptyValues: CreateCustomerInput = {
   defaultCurrencyCode: 'INR',
   paymentTermsDays: 30,
   notes: null,
-  addresses: [],
+  addresses: [emptyAddress()],
   contacts: [],
 };
 
@@ -72,15 +107,26 @@ export const CustomerFormModal = ({
 
   useEffect(() => {
     if (!open) return;
-    reset(
-      customer
-        ? ({
-            ...customer,
-            addresses: customer.addresses.map(({ id: _id, ...rest }) => rest),
-            contacts: customer.contacts.map(({ id: _id, ...rest }) => rest),
-          } as unknown as CreateCustomerInput)
-        : emptyValues,
-    );
+
+    if (!customer) {
+      reset(emptyValues);
+      return;
+    }
+
+    /* The fieldset below always edits index 0 and calls itself "Billing address",
+       so put the billing one there. Any others ride along untouched — an update
+       replaces the whole set, so they have to be sent back. */
+    const saved = customer.addresses.map(({ id: _id, ...rest }) => rest);
+    const billingFirst = [
+      ...saved.filter((address) => address.type === 'BILLING'),
+      ...saved.filter((address) => address.type !== 'BILLING'),
+    ];
+
+    reset({
+      ...customer,
+      addresses: billingFirst.length > 0 ? billingFirst : [emptyAddress()],
+      contacts: customer.contacts.map(({ id: _id, ...rest }) => rest),
+    } as unknown as CreateCustomerInput);
   }, [open, customer, reset]);
 
   const mutation = useMutation({
@@ -111,7 +157,31 @@ export const CustomerFormModal = ({
       <div className="modal fade show d-block" role="dialog" aria-modal="true" tabIndex={-1}>
         <div className="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
           <div className="modal-content">
-            <form onSubmit={handleSubmit((values) => mutation.mutateAsync(values))} noValidate>
+            <form
+              onSubmit={handleSubmit(
+                (values) => {
+                  /* An address nobody filled in is not an address. */
+                  const [first, ...rest] = values.addresses;
+                  return mutation.mutateAsync({
+                    ...values,
+                    addresses: isBlankAddress(first) ? rest : values.addresses,
+                  });
+                },
+                /* Silence on a rejected submit is the worst outcome: the button
+                   appears dead. Name the first field that is wrong. */
+                (fieldErrors) => {
+                  const [path, error] = Object.entries(fieldErrors)[0] ?? [];
+                  toast.error(
+                    'Check the highlighted fields',
+                    path
+                      ? `${path}: ${(error as { message?: string })?.message ?? 'not valid'}`
+                      : undefined,
+                  );
+                  if (path) document.getElementById(path)?.focus();
+                },
+              )}
+              noValidate
+            >
               <div className="modal-header">
                 <h2 className="modal-title h6">{isEdit ? 'Edit customer' : 'New customer'}</h2>
                 <button type="button" className="btn-close" aria-label="Close" onClick={onClose} />
@@ -306,8 +376,6 @@ export const CustomerFormModal = ({
                 </FieldGroup>
 
                 <FieldGroup title="Billing address">
-                  <input type="hidden" value="BILLING" {...register('addresses.0.type')} />
-                  <input type="hidden" value="true" {...register('addresses.0.isDefault')} />
                   <div className="row">
                     <Field label="Address line 1" htmlFor="addr1" className="col-md-6 mb-3">
                       <input
@@ -355,7 +423,6 @@ export const CustomerFormModal = ({
                       <input
                         id="addrCountry"
                         className="form-control"
-                        defaultValue="India"
                         {...register('addresses.0.country')}
                       />
                     </Field>

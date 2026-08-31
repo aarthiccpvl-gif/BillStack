@@ -202,6 +202,36 @@ h3,
   }
 }
 
+// ---------------------------------------------------------------------------
+// Modals
+//
+// Bootstrap's scrollable modal assumes .modal-header, .modal-body and
+// .modal-footer are direct children of .modal-content, which is the flex column
+// that carries the height limit. Every form in this app wraps those three in a
+// <form>, so the chain broke at that element: the form is a plain block with no
+// max-height, .modal-body grew to its natural height instead of scrolling, and
+// .modal-content's `overflow: hidden` then clipped the footer away — leaving the
+// submit button unreachable at anything less than a very tall window.
+//
+// Letting the form inherit the constraint restores what the class promises: a
+// fixed header, a scrolling body, and the buttons always in view.
+// ---------------------------------------------------------------------------
+.modal-dialog-scrollable .modal-content > form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0; // a flex item's default `min-height: auto` refuses to shrink
+  max-height: 100%;
+  overflow: hidden;
+}
+
+// Small screens: a centred dialog with side margins wastes the width a form of
+// this size needs, and the viewport is the constraint that matters.
+@include media-breakpoint-down(sm) {
+  .modal-dialog {
+    margin: 0.5rem;
+  }
+}
+
 // Status badges keep their tone but sit on a tinted ground rather than a solid
 // block, so a table of them reads as data instead of as a traffic light.
 .badge {

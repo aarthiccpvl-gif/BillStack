@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { optionalEmail, optionalText } from './common';
+import { optionalEmail, optionalPattern, optionalText } from './common';
 import { gstinSchema, panSchema } from './company';
 
 /**
@@ -65,14 +65,8 @@ export const createCustomerSchema = z
     email: optionalEmail,
     phone: optionalText(40),
     altPhone: optionalText(40),
-    gstin: gstinSchema
-      .optional()
-      .or(z.literal(''))
-      .transform((v) => (v === '' ? null : (v ?? null))),
-    pan: panSchema
-      .optional()
-      .or(z.literal(''))
-      .transform((v) => (v === '' ? null : (v ?? null))),
+    gstin: optionalPattern(gstinSchema),
+    pan: optionalPattern(panSchema),
     otherTaxId: optionalText(40),
     taxTreatment: z.enum(TAX_TREATMENTS).default('REGISTERED'),
     placeOfSupplyStateCode: optionalText(4),

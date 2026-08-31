@@ -35,6 +35,22 @@ export const optionalText = (max: number) =>
     .nullish()
     .transform((value) => (value === '' || value == null ? null : value));
 
+/**
+ * An optional value that must match a pattern whenever it is actually given.
+ *
+ * `''`, `null` and `undefined` all mean "not given" and all become `null`. The
+ * `null` branch is the one that is easy to leave out and expensive to omit: a
+ * form's empty value for a cleared field is `null`, and a bare `.optional()`
+ * rejects it. That failure sinks the whole object — and a Zod `.refine()` never
+ * runs on an object that already failed, so the message the user actually needed
+ * ("a registered business needs a GSTIN") never appears either.
+ */
+export const optionalPattern = (schema: z.ZodType<string, z.ZodTypeDef, string>) =>
+  z
+    .union([z.literal(''), schema])
+    .nullish()
+    .transform((value): string | null => (value === '' || value == null ? null : value));
+
 /** The same tolerance for an optional email address. */
 export const optionalEmail = z
   .union([z.literal(''), z.string().trim().email('Enter a valid email address').max(190)])
