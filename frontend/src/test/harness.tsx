@@ -343,6 +343,20 @@ export const mockApi = (user: AuthUser, options: MockOptions = {}) => {
       meta: { page: 1, pageSize: 25, total: items.length, totalPages: items.length ? 1 : 0 },
     });
   }) as never);
+
+  /* The preview and download helpers use the raw axios instance rather than the
+     envelope-aware client. Answer those here too, so a detail-page test never
+     reaches jsdom's XMLHttpRequest and races the next test with a network error. */
+  vi.spyOn(apiClientModule.http, 'get').mockImplementation(((url: string) => {
+    const data = url.endsWith('/preview') ? '<html><body>Preview</body></html>' : '';
+    return Promise.resolve({
+      data,
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config: {},
+    });
+  }) as never);
 };
 
 export const renderAt = (path: string) =>

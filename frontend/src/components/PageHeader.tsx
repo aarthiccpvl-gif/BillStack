@@ -14,7 +14,7 @@ interface PageHeaderProps {
 }
 
 export const PageHeader = ({ title, description, breadcrumbs, actions }: PageHeaderProps) => (
-  <div className="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+  <div className="page-header d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
     <div>
       {breadcrumbs && breadcrumbs.length > 0 && (
         <nav aria-label="Breadcrumb">
@@ -37,6 +37,10 @@ export const PageHeader = ({ title, description, breadcrumbs, actions }: PageHea
       <h1 className="page-title">{title}</h1>
       {description && <p className="text-secondary mb-0 mt-1">{description}</p>}
     </div>
-    {actions && <div className="d-flex gap-2">{actions}</div>}
+    {actions && (
+      <div className="page-header__actions d-flex flex-wrap align-items-center gap-2">
+        {actions}
+      </div>
+    )}
   </div>
 );
