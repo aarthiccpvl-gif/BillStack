@@ -155,6 +155,22 @@ export interface DocumentData {
   };
 }
 
+/**
+ * A supporting file attached to a quotation or an invoice.
+ *
+ * The bytes live behind the authenticated files endpoint; this is the metadata the
+ * document screen needs to list, download and remove it.
+ */
+export interface DocumentAttachmentRecord {
+  id: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  checksumSha256: string | null;
+  createdAt: string;
+  createdByName: string | null;
+}
+
 /** Summary shapes returned by the templates API. */
 export interface TemplateVersionSummary {
   id: number;

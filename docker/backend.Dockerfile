@@ -59,17 +59,21 @@ FROM deps AS build
 COPY tsconfig.base.json ./
 COPY shared ./shared
 COPY backend ./backend
+COPY frontend ./frontend
 
 RUN npm run build -w shared \
-    && npm run prisma:generate --if-present \
-    && npm run build -w backend
+    && npx prisma generate --schema backend/prisma/schema.prisma \
+    && npm run build -w backend \
+    && npm run build -w frontend
 
 # ---- runtime ----
 FROM base AS runtime
-ENV NODE_ENV=production
+ENV NODE_ENV=production \
+    FRONTEND_DIST=/app/frontend/dist
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/shared ./shared
 COPY --from=build /app/backend ./backend
+COPY --from=build /app/frontend/dist ./frontend/dist
 COPY package.json ./
 
 RUN mkdir -p /app/var/storage && chown -R node:node /app/var

@@ -94,8 +94,36 @@ export const COMPANY = {
   isConfigured: true,
 };
 
+export const FINANCIAL_YEARS = [
+  {
+    id: 2,
+    code: '2026-27',
+    startDate: '2026-04-01',
+    endDate: '2027-03-31',
+    isCurrent: true,
+    status: 'OPEN',
+    documentCounts: { quotations: 5, invoices: 4 },
+  },
+  {
+    id: 1,
+    code: '2025-26',
+    startDate: '2025-04-01',
+    endDate: '2026-03-31',
+    isCurrent: false,
+    status: 'CLOSED',
+    documentCounts: { quotations: 3, invoices: 2 },
+  },
+];
+
 export const SUMMARY = {
-  financialYear: { id: 2, code: '2026-27', startDate: '2026-04-01', endDate: '2027-03-31' },
+  period: {
+    scope: 'FY',
+    financialYearId: 2,
+    code: '2026-27',
+    startDate: '2026-04-01',
+    endDate: '2027-03-31',
+    label: 'Financial year 2026-27',
+  },
   baseCurrencyCode: 'INR',
   baseCurrencySymbol: '₹',
   baseCurrencyDecimalPlaces: 2,
@@ -287,7 +315,7 @@ export const mockApi = (user: AuthUser, options: MockOptions = {}) => {
     if (url === '/company') return Promise.resolve(COMPANY);
     if (url === '/company/bank-accounts') return Promise.resolve([]);
     if (url.startsWith('/templates')) return Promise.resolve([]);
-    if (url === '/dashboard/summary') return Promise.resolve(SUMMARY);
+    if (url.startsWith('/dashboard/summary')) return Promise.resolve(SUMMARY);
     if (url.startsWith('/dashboard/charts')) return Promise.resolve(CHARTS);
     if (url.startsWith('/dashboard/recent-documents')) return Promise.resolve(RECENT);
     if (url.startsWith('/reports/')) return Promise.resolve(REPORT);

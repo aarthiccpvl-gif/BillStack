@@ -1,5 +1,6 @@
 import type {
   CreateInvoiceInput,
+  DocumentAttachmentRecord,
   DocumentRevisionRecord,
   InvoiceListRow,
   InvoiceRecord,
@@ -44,6 +45,39 @@ export const invoicesApi = {
 
   history: (id: string) => apiClient.get<DocumentRevisionRecord[]>(`/invoices/${id}/history`),
 
+  attachments: (id: string) =>
+    apiClient.get<DocumentAttachmentRecord[]>(`/invoices/${id}/attachments`),
+  uploadAttachment: (id: string, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    /* Let the browser set the multipart boundary — overriding Content-Type breaks it. */
+    return apiClient.post<DocumentAttachmentRecord>(`/invoices/${id}/attachments`, form, {
+      headers: { 'Content-Type': undefined },
+    });
+  },
+  deleteAttachment: (id: string, fileId: string) =>
+    apiClient.delete<{ removed: boolean }>(`/invoices/${id}/attachments/${fileId}`),
+  downloadAttachment: async (
+    id: string,
+    fileId: string,
+  ): Promise<{ blob: Blob; fileName: string | null }> => {
+    const response = await http.get<Blob>(`/invoices/${id}/attachments/${fileId}`, {
+      responseType: 'blob',
+    });
+    const disposition = String(response.headers['content-disposition'] ?? '');
+    const match = /filename="?([^"]+)"?/.exec(disposition);
+    const encoded = match?.[1];
+    let fileName: string | null = encoded ?? null;
+    if (encoded) {
+      try {
+        fileName = decodeURIComponent(encoded);
+      } catch {
+        fileName = encoded;
+      }
+    }
+    return { blob: response.data, fileName };
+  },
+
   shareLinks: (id: string) => apiClient.get<ShareLinkRecord[]>(`/invoices/${id}/share-links`),
   createShareLink: (id: string, expiresInDays?: number) =>
     apiClient.post<ShareLinkRecord>(`/invoices/${id}/share-links`, { expiresInDays }),
@@ -79,5 +113,6 @@ export const invoiceKeys = {
   list: (params: InvoiceListParams) => [...invoiceKeys.all, 'list', params] as const,
   detail: (id: string) => [...invoiceKeys.all, 'detail', id] as const,
   history: (id: string) => [...invoiceKeys.all, 'history', id] as const,
+  attachments: (id: string) => [...invoiceKeys.all, 'attachments', id] as const,
   shares: (id: string) => [...invoiceKeys.all, 'shares', id] as const,
 };

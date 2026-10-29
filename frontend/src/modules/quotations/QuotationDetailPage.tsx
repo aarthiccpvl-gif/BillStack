@@ -20,6 +20,7 @@ import { quotationKeys, quotationsApi } from '@/services/quotations-api';
 import { invoiceKeys } from '@/services/invoices-api';
 import { useCurrencyFormat } from '@/hooks/useMasters';
 import { formatDate, formatDateTime, saveBlob } from '@/utils/format';
+import { AttachmentsPanel } from '@/modules/documents/AttachmentsPanel';
 import { DocumentPreviewCard } from '@/modules/documents/DocumentPreviewCard';
 import { ShareLinksPanel } from '@/modules/documents/ShareLinksPanel';
 import { RevisionHistoryPanel } from '@/modules/documents/RevisionHistoryPanel';
@@ -437,6 +438,15 @@ export const QuotationDetailPage = () => {
               </div>
             </div>
           )}
+
+          <div className="mb-3">
+            <AttachmentsPanel
+              documentId={id}
+              api={quotationsApi}
+              attachmentsKey={quotationKeys.attachments(id)}
+              writePermission={PERMISSIONS.QUOTATION_UPDATE}
+            />
+          </div>
 
           <div className="mb-3">
             <ShareLinksPanel

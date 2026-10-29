@@ -13,6 +13,7 @@ import {
 import { PageHeader } from '@/components/PageHeader';
 import { StatusBadge } from '@/components/StatusBadge';
 import { ErrorState } from '@/components/states';
+import { useFinancialYear } from '@/app/FinancialYearProvider';
 import { ApiError } from '@/services/api-client';
 import { dashboardApi, dashboardKeys } from '@/services/dashboard-api';
 import { useCurrencies, useCurrencyFormatter } from '@/hooks/useMasters';
@@ -147,22 +148,26 @@ const RecentRow = ({
 
 export const DashboardPage = () => {
   const [range, setRange] = useState<'FY' | '12M'>('FY');
+  const { selection, isLoading: yearsLoading } = useFinancialYear();
   const { data: currencies } = useCurrencies(true);
   const formatCurrency = useCurrencyFormatter();
 
   const summaryQuery = useQuery({
-    queryKey: dashboardKeys.summary(),
-    queryFn: () => dashboardApi.summary(),
+    queryKey: dashboardKeys.summary(selection),
+    queryFn: () => dashboardApi.summary(selection),
+    enabled: !yearsLoading,
   });
 
   const chartsQuery = useQuery({
-    queryKey: dashboardKeys.charts(range),
-    queryFn: () => dashboardApi.charts(range),
+    queryKey: dashboardKeys.charts(range, selection),
+    queryFn: () => dashboardApi.charts(range, selection),
+    enabled: !yearsLoading,
   });
 
   const recentQuery = useQuery({
-    queryKey: dashboardKeys.recent(8),
-    queryFn: () => dashboardApi.recent(8),
+    queryKey: dashboardKeys.recent(8, selection),
+    queryFn: () => dashboardApi.recent(8, selection),
+    enabled: !yearsLoading,
   });
 
   const summary: DashboardSummary | undefined = summaryQuery.data;
@@ -198,7 +203,9 @@ export const DashboardPage = () => {
         title="Dashboard"
         description={
           summary
-            ? `Financial year ${summary.financialYear.code} · ${formatDate(summary.financialYear.startDate)} to ${formatDate(summary.financialYear.endDate)}`
+            ? summary.period.scope === 'ALL'
+              ? 'All financial years'
+              : `${summary.period.label} · ${formatDate(summary.period.startDate ?? '')} to ${formatDate(summary.period.endDate ?? '')}`
             : undefined
         }
       />
@@ -216,7 +223,7 @@ export const DashboardPage = () => {
           <Kpi
             label="Outstanding"
             value={money(summary?.invoices.outstandingBase)}
-            hint={`${summary?.invoices.total ?? 0} invoice${summary?.invoices.total === 1 ? '' : 's'} this year`}
+            hint={`${summary?.invoices.total ?? 0} invoice${summary?.invoices.total === 1 ? '' : 's'} ${summary?.period.scope === 'ALL' ? 'in all years' : 'this year'}`}
             icon={Banknote}
             to="/invoices"
             feature
@@ -267,7 +274,11 @@ export const DashboardPage = () => {
                   className={`btn btn-outline-secondary${range === 'FY' ? ' active' : ''}`}
                   onClick={() => setRange('FY')}
                 >
-                  This financial year
+                  {range === 'FY'
+                    ? selection === 'ALL'
+                      ? 'All years'
+                      : 'Financial year'
+                    : 'Last 12 months'}
                 </button>
                 <button
                   type="button"

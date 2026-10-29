@@ -12,6 +12,7 @@ import { ApiError } from '@/services/api-client';
 import { invoiceKeys, invoicesApi } from '@/services/invoices-api';
 import { useCurrencyFormat } from '@/hooks/useMasters';
 import { formatDate, formatDateTime, saveBlob } from '@/utils/format';
+import { AttachmentsPanel } from '@/modules/documents/AttachmentsPanel';
 import { DocumentPreviewCard } from '@/modules/documents/DocumentPreviewCard';
 import { ShareLinksPanel } from '@/modules/documents/ShareLinksPanel';
 import { RevisionHistoryPanel } from '@/modules/documents/RevisionHistoryPanel';
@@ -444,6 +445,15 @@ export const InvoiceDetailPage = () => {
               </div>
             </div>
           )}
+
+          <div className="mb-3">
+            <AttachmentsPanel
+              documentId={id}
+              api={invoicesApi}
+              attachmentsKey={invoiceKeys.attachments(id)}
+              writePermission={PERMISSIONS.INVOICE_UPDATE}
+            />
+          </div>
 
           <div className="mb-3">
             <ShareLinksPanel

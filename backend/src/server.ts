@@ -4,6 +4,7 @@ import { env } from './config/env';
 import { disconnectDatabase } from './db/prisma';
 import { startDailyJob, stopDailyJob } from './jobs/daily.job';
 import { warnOnCrossSiteAuth } from './middleware/security';
+import { smokeTestRenderer } from './pdf/pdf.service';
 import { logger } from './utils/logger';
 
 process.env.TZ = env.TZ;
@@ -16,6 +17,11 @@ const server = app.listen(env.PORT, () => {
     { port: env.PORT, env: env.NODE_ENV, tz: env.TZ },
     `${APP_NAME} v${APP_VERSION} listening on ${env.APP_URL}`,
   );
+
+  /* Prove Chromium can render before the first customer download asks it to.
+     Failure is logged, not fatal: the API and every screen that does not need a
+     PDF should still come up, and readiness can report the degraded state. */
+  void smokeTestRenderer();
 });
 
 /** Finish in-flight requests, release the database, then exit. */

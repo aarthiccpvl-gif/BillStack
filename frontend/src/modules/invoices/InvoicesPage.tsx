@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Plus, Search } from 'lucide-react';
@@ -13,6 +13,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { DataTable, type Column } from '@/components/DataTable';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useAuth } from '@/app/AuthProvider';
+import { useFinancialYear } from '@/app/FinancialYearProvider';
 import { ApiError } from '@/services/api-client';
 import { invoiceKeys, invoicesApi } from '@/services/invoices-api';
 import { useCurrencies } from '@/hooks/useMasters';
@@ -29,6 +30,7 @@ import { formatDate } from '@/utils/format';
 export const InvoicesPage = () => {
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
+  const { financialYearId, label: yearLabel, isLoading: yearsLoading } = useFinancialYear();
   const { data: currencies } = useCurrencies(true);
   const { data: customers } = useCustomerOptions();
 
@@ -48,6 +50,7 @@ export const InvoicesPage = () => {
     page,
     pageSize: 25,
     sort,
+    ...(financialYearId ? { financialYearId } : {}),
     ...(search ? { search } : {}),
     ...(status ? { status } : {}),
     ...(customerId ? { customerId: Number(customerId) } : {}),
@@ -59,7 +62,13 @@ export const InvoicesPage = () => {
   const query = useQuery({
     queryKey: invoiceKeys.list(params),
     queryFn: () => invoicesApi.list(params),
+    enabled: !yearsLoading,
   });
+
+  /* A page number from one year is meaningless in another. */
+  useEffect(() => {
+    setPage(1);
+  }, [financialYearId]);
 
   const hasFilters = Boolean(search || status || customerId || currencyCode || dateFrom || dateTo);
 
@@ -178,7 +187,7 @@ export const InvoicesPage = () => {
     <>
       <PageHeader
         title="Invoices"
-        description="What has been billed, what has been paid, and what is late."
+        description={`What has been billed, what has been paid, and what is late. · ${yearLabel}`}
         breadcrumbs={[{ label: 'Sales' }, { label: 'Invoices' }]}
         actions={
           canCreate ? (

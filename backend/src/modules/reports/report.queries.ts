@@ -89,6 +89,10 @@ const dateWindow = (filters: ReportFilters) =>
       }
     : {};
 
+/** The global financial-year selector is a document filter, not a customer filter. */
+const financialYearWindow = (filters: ReportFilters) =>
+  filters.financialYearId ? { financialYearId: filters.financialYearId } : {};
+
 const documentSearch = (search: string | undefined) =>
   search
     ? {
@@ -108,7 +112,7 @@ const quotationWhere = (filters: ReportFilters): Prisma.QuotationWhereInput => (
   ...(filters.status ? { status: filters.status as QuotationStatus } : {}),
   ...(filters.customerId ? { customerId: filters.customerId } : {}),
   ...(filters.currencyCode ? { currencyCode: filters.currencyCode } : {}),
-  ...(filters.financialYearId ? { financialYearId: filters.financialYearId } : {}),
+  ...financialYearWindow(filters),
   ...(filters.createdById ? { createdById: filters.createdById } : {}),
   ...dateWindow(filters),
   ...documentSearch(filters.search),
@@ -229,7 +233,7 @@ const invoiceWhere = (filters: ReportFilters): Prisma.InvoiceWhereInput => {
       : {}),
     ...(filters.customerId ? { customerId: filters.customerId } : {}),
     ...(filters.currencyCode ? { currencyCode: filters.currencyCode } : {}),
-    ...(filters.financialYearId ? { financialYearId: filters.financialYearId } : {}),
+    ...financialYearWindow(filters),
     ...(filters.createdById ? { createdById: filters.createdById } : {}),
     ...dateWindow(filters),
     ...documentSearch(filters.search),
@@ -393,7 +397,12 @@ const customerReport: ReportDefinition = {
       const [quotationCounts, invoiceTotals] = await Promise.all([
         prisma.quotation.groupBy({
           by: ['customerId'],
-          where: { customerId: { in: ids }, deletedAt: null, ...dateWindow(filters) },
+          where: {
+            customerId: { in: ids },
+            deletedAt: null,
+            ...financialYearWindow(filters),
+            ...dateWindow(filters),
+          },
           _count: { _all: true },
         }),
         prisma.invoice.groupBy({
@@ -402,6 +411,7 @@ const customerReport: ReportDefinition = {
             customerId: { in: ids },
             deletedAt: null,
             status: { in: ['ISSUED', 'SENT', 'VIEWED', 'PARTIALLY_PAID', 'PAID'] },
+            ...financialYearWindow(filters),
             ...dateWindow(filters),
           },
           _count: { _all: true },
@@ -565,6 +575,11 @@ const summaryReport: ReportDefinition = {
  * has invoices but no quotations still needs a row, and getting that right in
  * SQL is one job instead of two halves that have to agree.
  */
+const financialYearSqlWindow = (filters: ReportFilters) =>
+  filters.financialYearId
+    ? Prisma.sql`AND financial_year_id = ${filters.financialYearId}`
+    : Prisma.empty;
+
 const summaryRows = async (filters: ReportFilters): Promise<SummaryRow[]> => {
   const from = filters.dateFrom ? toDate(filters.dateFrom) : new Date('2000-01-01T00:00:00.000Z');
   const to = filters.dateTo ? toDate(filters.dateTo) : new Date('2999-12-31T00:00:00.000Z');
@@ -589,6 +604,7 @@ const summaryRows = async (filters: ReportFilters): Promise<SummaryRow[]> => {
         AND document_date BETWEEN ${from} AND ${to}
         AND (${customer} = 0 OR customer_id = ${customer})
         AND (${currency} = '' OR currency_code = ${currency})
+        ${financialYearSqlWindow(filters)}
       GROUP BY month, currency_code
 
       UNION ALL
@@ -605,6 +621,7 @@ const summaryRows = async (filters: ReportFilters): Promise<SummaryRow[]> => {
         AND document_date BETWEEN ${from} AND ${to}
         AND (${customer} = 0 OR customer_id = ${customer})
         AND (${currency} = '' OR currency_code = ${currency})
+        ${financialYearSqlWindow(filters)}
       GROUP BY month, currency_code
     ) combined
     GROUP BY month, currency_code

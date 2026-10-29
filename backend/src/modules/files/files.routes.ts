@@ -1,9 +1,11 @@
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
+import { PERMISSIONS, type Permission } from '@app/shared';
 import { asyncHandler } from '../../utils/http';
 import { parsedParams, validateParams } from '../../middleware/validate';
 import { authenticatedOnly } from '../../middleware/authorize';
-import { NotFoundError } from '../../utils/errors';
+import { getAuth } from '../../middleware/authenticate';
+import { ForbiddenError, NotFoundError } from '../../utils/errors';
 import { prisma } from '../../db/prisma';
 import { getStorage } from '../../storage/storage.service';
 
@@ -28,6 +30,25 @@ filesRouter.get(
 
     const file = await prisma.documentFile.findUnique({ where: { id: BigInt(id) } });
     if (!file) throw new NotFoundError('File');
+
+    /* Branding is deliberately readable by every signed-in user; a financial
+       document's bytes are not. This route is older than the scoped attachment
+       endpoints, so it re-checks the owning entity's permission rather than
+       trusting possession of a numeric id. */
+    const required: Permission | null =
+      file.entityType === 'QUOTATION'
+        ? file.kind === 'ATTACHMENT'
+          ? PERMISSIONS.QUOTATION_READ
+          : PERMISSIONS.QUOTATION_DOWNLOAD
+        : file.entityType === 'INVOICE'
+          ? file.kind === 'ATTACHMENT'
+            ? PERMISSIONS.INVOICE_READ
+            : PERMISSIONS.INVOICE_DOWNLOAD
+          : null;
+
+    if (required && !getAuth(_req).permissions.includes(required)) {
+      throw new ForbiddenError('You do not have permission to download this file.');
+    }
 
     const storage = getStorage();
     if (!(await storage.exists(file.storageKey))) {

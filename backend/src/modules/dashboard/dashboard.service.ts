@@ -8,6 +8,7 @@ import {
   toDateOnlyString,
   type CurrencyTotals,
   type DashboardCharts,
+  type DashboardPeriod,
   type DashboardSummary,
   type MonthPoint,
   type RecentDocument,
@@ -15,6 +16,7 @@ import {
 } from '@app/shared';
 import { prisma } from '../../db/prisma';
 import { getCurrent } from '../../services/financial-year.service';
+import { NotFoundError } from '../../utils/errors';
 
 /**
  * The dashboard.
@@ -85,10 +87,71 @@ const countBy = <T extends string>(
   return counts;
 };
 
-export const getSummary = async (): Promise<DashboardSummary> => {
-  const financialYear = await getCurrent();
-  const from = financialYear.startDate;
-  const to = financialYear.endDate;
+export type FinancialYearSelection = number | 'ALL';
+
+interface PeriodScope {
+  period: DashboardPeriod;
+  from: Date | null;
+  to: Date | null;
+  financialYearId: number | null;
+}
+
+/**
+ * Resolves the dashboard scope.
+ *
+ * No `financialYearId` means the current year, which keeps the dashboard's
+ * historical default. `ALL` is passed explicitly by the selector and removes
+ * the date window rather than guessing one.
+ */
+const resolvePeriod = async (selection?: FinancialYearSelection): Promise<PeriodScope> => {
+  if (selection === 'ALL') {
+    return {
+      period: {
+        scope: 'ALL',
+        financialYearId: null,
+        code: null,
+        startDate: null,
+        endDate: null,
+        label: 'All financial years',
+      },
+      from: null,
+      to: null,
+      financialYearId: null,
+    };
+  }
+
+  const year =
+    selection === undefined
+      ? await getCurrent()
+      : await prisma.financialYear.findUnique({ where: { id: selection } });
+  if (!year) throw new NotFoundError('Financial year');
+
+  return {
+    period: {
+      scope: 'FY',
+      financialYearId: year.id,
+      code: year.code,
+      startDate: toDateOnlyString(year.startDate),
+      endDate: toDateOnlyString(year.endDate),
+      label: `Financial year ${year.code}`,
+    },
+    from: year.startDate,
+    to: year.endDate,
+    financialYearId: year.id,
+  };
+};
+
+/** A Prisma `where` fragment; empty under "All financial years". */
+const documentDateScope = (from: Date | null, to: Date | null) =>
+  from && to ? { documentDate: { gte: from, lte: to } } : {};
+
+/** The same fragment for raw SQL, where a missing clause cannot be spread. */
+const documentDateClause = (from: Date | null, to: Date | null) =>
+  from && to ? Prisma.sql`AND document_date BETWEEN ${from} AND ${to}` : Prisma.empty;
+
+export const getSummary = async (selection?: FinancialYearSelection): Promise<DashboardSummary> => {
+  const scope = await resolvePeriod(selection);
+  const { from, to } = scope;
 
   const company = await prisma.companySettings.findUniqueOrThrow({
     where: { id: 1 },
@@ -112,12 +175,12 @@ export const getSummary = async (): Promise<DashboardSummary> => {
   ] = await Promise.all([
     prisma.quotation.groupBy({
       by: ['status'],
-      where: { deletedAt: null, documentDate: { gte: from, lte: to } },
+      where: { deletedAt: null, ...documentDateScope(from, to) },
       _count: { _all: true },
     }),
     prisma.invoice.groupBy({
       by: ['status'],
-      where: { deletedAt: null, documentDate: { gte: from, lte: to } },
+      where: { deletedAt: null, ...documentDateScope(from, to) },
       _count: { _all: true },
     }),
 
@@ -127,7 +190,7 @@ export const getSummary = async (): Promise<DashboardSummary> => {
           SUM(CASE WHEN status IN ('SENT','VIEWED','ACCEPTED') THEN base_total ELSE 0 END) AS open_value,
           SUM(CASE WHEN status IN ('ACCEPTED','CONVERTED') THEN base_total ELSE 0 END) AS accepted_value
         FROM quotations
-        WHERE deleted_at IS NULL AND document_date BETWEEN ${from} AND ${to}
+        WHERE deleted_at IS NULL ${documentDateClause(from, to)}
       `),
 
     /* Money in the base currency, each document at the rate it recorded. */
@@ -143,7 +206,7 @@ export const getSummary = async (): Promise<DashboardSummary> => {
         FROM invoices
         WHERE deleted_at IS NULL
           AND status IN ('ISSUED','SENT','VIEWED','PARTIALLY_PAID','PAID')
-          AND document_date BETWEEN ${from} AND ${to}
+          ${documentDateClause(from, to)}
       `),
 
     prisma.$queryRaw<CurrencyRow[]>(Prisma.sql`
@@ -154,7 +217,7 @@ export const getSummary = async (): Promise<DashboardSummary> => {
         FROM invoices
         WHERE deleted_at IS NULL
           AND status IN ('ISSUED','SENT','VIEWED','PARTIALLY_PAID','PAID')
-          AND document_date BETWEEN ${from} AND ${to}
+          ${documentDateClause(from, to)}
         GROUP BY currency_code
       `),
 
@@ -165,7 +228,7 @@ export const getSummary = async (): Promise<DashboardSummary> => {
         FROM quotations
         WHERE deleted_at IS NULL
           AND status IN ('SENT','VIEWED','ACCEPTED','DECLINED','EXPIRED','CONVERTED')
-          AND document_date BETWEEN ${from} AND ${to}
+          ${documentDateClause(from, to)}
         GROUP BY currency_code
       `),
   ]);
@@ -175,7 +238,7 @@ export const getSummary = async (): Promise<DashboardSummary> => {
       deletedAt: null,
       status: { in: ['ISSUED', 'SENT', 'VIEWED', 'PARTIALLY_PAID'] },
       dueDate: { lt: today },
-      documentDate: { gte: from, lte: to },
+      ...documentDateScope(from, to),
     },
   });
 
@@ -197,7 +260,7 @@ export const getSummary = async (): Promise<DashboardSummary> => {
   const outstanding = sum([billed]).minus(sum([received]));
 
   /* Currency metadata for the per-currency rows, from the master rather than the
-     documents, so a currency with no documents this year still formats correctly. */
+     documents, so a currency with no documents in the period still formats correctly. */
   const currencies = await prisma.currency.findMany();
   const currencyMeta = new Map(currencies.map((currency) => [currency.code, currency]));
 
@@ -236,12 +299,7 @@ export const getSummary = async (): Promise<DashboardSummary> => {
   });
 
   return {
-    financialYear: {
-      id: financialYear.id,
-      code: financialYear.code,
-      startDate: toDateOnlyString(financialYear.startDate),
-      endDate: toDateOnlyString(financialYear.endDate),
-    },
+    period: scope.period,
     baseCurrencyCode: company.baseCurrencyCode,
     baseCurrencySymbol: baseCurrency?.symbol ?? company.baseCurrencyCode,
     baseCurrencyDecimalPlaces: decimals,
@@ -312,18 +370,49 @@ interface MonthRow {
   value: unknown;
 }
 
-export const getCharts = async (range: 'FY' | '12M'): Promise<DashboardCharts> => {
-  const financialYear = await getCurrent();
+export const getCharts = async (
+  range: 'FY' | '12M',
+  selection?: FinancialYearSelection,
+): Promise<DashboardCharts> => {
+  const scope = await resolvePeriod(selection);
   const company = await prisma.companySettings.findUniqueOrThrow({
     where: { id: 1 },
     select: { baseCurrencyCode: true },
   });
 
-  const end = range === 'FY' ? financialYear.endDate : toDate(toDateOnlyString(new Date()));
-  const start =
-    range === 'FY'
-      ? financialYear.startDate
-      : new Date(Date.UTC(end.getUTCFullYear() - 1, end.getUTCMonth() + 1, 1));
+  const today = toDate(toDateOnlyString(new Date()));
+  let end: Date;
+  let start: Date;
+
+  if (range === '12M') {
+    /* An explicitly rolling window: it does not pretend to be a financial year. */
+    end = today;
+    start = new Date(Date.UTC(end.getUTCFullYear() - 1, end.getUTCMonth() + 1, 1));
+  } else if (scope.from && scope.to) {
+    start = scope.from;
+    end = scope.to;
+  } else {
+    /* "All financial years" has no bounds, so the chart starts at the first
+       document in the book and runs to today. An empty book gets a year. */
+    const [quotationMin, invoiceMin] = await Promise.all([
+      prisma.quotation.aggregate({
+        where: { deletedAt: null },
+        _min: { documentDate: true },
+      }),
+      prisma.invoice.aggregate({
+        where: { deletedAt: null },
+        _min: { documentDate: true },
+      }),
+    ]);
+    const earliest = [quotationMin._min.documentDate, invoiceMin._min.documentDate]
+      .filter((date): date is Date => date !== null)
+      .sort((a, b) => a.getTime() - b.getTime())[0];
+
+    end = today;
+    start = earliest
+      ? new Date(Date.UTC(earliest.getUTCFullYear(), earliest.getUTCMonth(), 1))
+      : new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() - 11, 1));
+  }
 
   const [quotationMonths, billedMonths, receivedMonths, funnelRow] = await Promise.all([
     prisma.$queryRaw<MonthRow[]>(Prisma.sql`
@@ -399,18 +488,23 @@ export const getCharts = async (range: 'FY' | '12M'): Promise<DashboardCharts> =
 
 // ------------------------------------------------------ recent documents ---
 
-export const getRecentDocuments = async (limit: number): Promise<RecentDocument[]> => {
+export const getRecentDocuments = async (
+  limit: number,
+  selection?: FinancialYearSelection,
+): Promise<RecentDocument[]> => {
+  const scope = await resolvePeriod(selection);
+  const yearFilter = scope.financialYearId ? { financialYearId: scope.financialYearId } : {};
   const today = toDate(toDateOnlyString(new Date()));
 
   const [quotations, invoices] = await Promise.all([
     prisma.quotation.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, ...yearFilter },
       orderBy: { updatedAt: 'desc' },
       take: limit,
       include: { customer: { select: { name: true } } },
     }),
     prisma.invoice.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, ...yearFilter },
       orderBy: { updatedAt: 'desc' },
       take: limit,
       include: { customer: { select: { name: true } } },

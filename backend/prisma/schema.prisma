@@ -201,6 +201,8 @@ enum AuditAction {
   SHARE_REVOKED
   REPORT_EXPORTED
   BULK_DOWNLOAD
+  ATTACHMENT_ADDED
+  ATTACHMENT_REMOVED
 }
 
 // ------------------------------------------------------ identity & access --

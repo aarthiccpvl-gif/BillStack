@@ -26,6 +26,7 @@ import { recordAudit } from '../../services/audit.service';
 import { createShareLink, listShareLinks, revokeShareLink } from '../../services/share.service';
 import { getStorage } from '../../storage/storage.service';
 import { convertQuotationToInvoice } from '../invoices/conversion.service';
+import { registerAttachmentRoutes } from '../documents/attachments.routes';
 import * as service from './quotations.service';
 import * as lifecycle from './quotations.lifecycle';
 
@@ -60,6 +61,13 @@ quotationsRouter.post(
 
 const idParam = documentIdParamSchema;
 const idOf = (res: Response): bigint => BigInt(parsedParams(res, idParam).id);
+
+registerAttachmentRoutes(quotationsRouter, {
+  entityType: 'QUOTATION',
+  readPermission: PERMISSIONS.QUOTATION_READ,
+  writePermission: PERMISSIONS.QUOTATION_UPDATE,
+  findDocument: (id) => service.findQuotation(id),
+});
 
 quotationsRouter.get(
   '/:id',

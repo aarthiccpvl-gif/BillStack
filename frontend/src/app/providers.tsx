@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ApiError } from '@/services/api-client';
 import { ToastProvider } from '@/components/Toast';
 import { AuthProvider } from './AuthProvider';
+import { FinancialYearProvider } from './FinancialYearProvider';
 
 /**
  * TanStack Query is the only cache for server data.
@@ -39,7 +40,9 @@ export const AppProviders = ({ children, queryClient }: AppProvidersProps) => {
   return (
     <QueryClientProvider client={client}>
       <ToastProvider>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <FinancialYearProvider>{children}</FinancialYearProvider>
+        </AuthProvider>
       </ToastProvider>
     </QueryClientProvider>
   );

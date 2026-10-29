@@ -175,17 +175,28 @@ Identical surface with `invoice.*` permissions, minus `convert`, plus:
 | POST | `/api/invoices/:id/cancel` | `invoice.cancel` | ✗ | `{ reason }` (required) |
 | POST | `/api/invoices/:id/void` | `invoice.void` | ✗ |
 | POST | `/api/invoices/:id/payment-status` | `payment.status_update` | ✗ | `{ status, amountPaid, paymentReference? }` — manual, no ledger (decision Q2) |
+| GET/POST/DELETE | `/api/invoices/:id/attachments…` | `invoice.read` / `invoice.update` | ✓ / ✗ |
 
 ### 3.10 Dashboard, reports, exports, audit
 
+The dashboard accepts `financialYearId=<id>` or `financialYearId=all`. Omitting it keeps the
+current financial year; `all` removes the date window. The summary and charts responses carry an
+explicit `period` object (`scope: "FY" | "ALL"`), so the screen can never imply a scope it did not
+apply.
+
 | Method | Path | Permission | FV |
 |---|---|---|---|
-| GET | `/api/dashboard/summary` | `dashboard.read` | ✓ | KPI cards |
-| GET | `/api/dashboard/charts?range=FY` | `dashboard.read` | ✓ | monthly series, conversion funnel |
-| GET | `/api/dashboard/recent-documents` | `dashboard.read` | ✓ |
+| GET | `/api/dashboard/summary?financialYearId=2\|all` | `dashboard.read` | ✓ | KPI cards + `period` |
+| GET | `/api/dashboard/charts?range=FY\|12M&financialYearId=2\|all` | `dashboard.read` | ✓ | monthly series, conversion funnel |
+| GET | `/api/dashboard/recent-documents?financialYearId=2\|all` | `dashboard.read` | ✓ |
 | GET | `/api/reports/quotations` · `/invoices` · `/customers` · `/summary` | `report.read` | ✓ |
 | GET | `/api/export/quotations?format=csv\|xlsx\|pdf` | `report.export` | ✓ | honours all list filters |
 | GET | `/api/export/invoices?format=…` · `/customers` · `/audit` | `report.export` | ✓ |
+
+Every document report and its export accepts the same `financialYearId`. It scopes the document
+aggregates in every tab — including a customer's quotation/invoice totals and both halves of the
+monthly summary — so the screen and the export use the same period. The audit export is unaffected:
+audit events do not belong to a financial year.
 | POST | `/api/export/documents/bulk-pdf` | `document.bulk_download` | ✓ | `{ type, ids[] }` → ZIP stream |
 | GET | `/api/audit-logs` | `audit.read` | ✓ | filter by user/action/entity/date |
 | GET | `/api/audit-logs/:entityType/:entityId` | `audit.read` | ✓ |

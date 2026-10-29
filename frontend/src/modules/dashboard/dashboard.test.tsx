@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { buildUser, mockApi, renderAt } from '@/test/harness';
+import { FINANCIAL_YEARS, buildUser, mockApi, renderAt } from '@/test/harness';
+import * as apiClientModule from '@/services/api-client';
 
 /**
  * Dashboard, search and the Finance Viewer surface.
@@ -208,5 +209,34 @@ describe('what a Finance Viewer can do from end to end', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: /do not have access/i }),
     ).toBeInTheDocument();
+  });
+});
+
+describe('the dashboard financial-year scope', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('asks for the current year, then asks for all years explicitly', async () => {
+    const user = userEvent.setup();
+    mockApi(buildUser('ADMIN'), {
+      get: { '/masters/financial-years': FINANCIAL_YEARS },
+    });
+    renderAt('/');
+
+    await screen.findByText('₹2,17,400.00');
+
+    const select = screen.getByLabelText('Financial year');
+    await waitFor(() => expect(select).toHaveValue('2'));
+
+    const requested = () =>
+      (apiClientModule.apiClient.get as unknown as { mock: { calls: [string][] } }).mock.calls.map(
+        ([url]) => url,
+      );
+
+    await waitFor(() => expect(requested()).toContain('/dashboard/summary?financialYearId=2'));
+
+    await user.selectOptions(select, 'ALL');
+
+    await waitFor(() => expect(requested()).toContain('/dashboard/summary?financialYearId=all'));
+    expect(localStorage.getItem('billstack.financial-year')).toBe('ALL');
   });
 });

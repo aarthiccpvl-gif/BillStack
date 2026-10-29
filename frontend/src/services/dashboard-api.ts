@@ -1,12 +1,23 @@
 import type { DashboardCharts, DashboardSummary, RecentDocument, SearchResults } from '@app/shared';
 import { apiClient, http } from './api-client';
 
+/** `ALL` is sent explicitly; the API treats a missing year as "current". */
+const withYear = (path: string, selection?: number | 'ALL'): string => {
+  const value = selection === 'ALL' ? 'all' : selection;
+  return value === undefined
+    ? path
+    : `${path}${path.includes('?') ? '&' : '?'}financialYearId=${value}`;
+};
+
 export const dashboardApi = {
-  summary: () => apiClient.get<DashboardSummary>('/dashboard/summary'),
-  charts: (range: 'FY' | '12M') =>
-    apiClient.get<DashboardCharts>(`/dashboard/charts?range=${range}`),
-  recent: (limit = 8) =>
-    apiClient.get<RecentDocument[]>(`/dashboard/recent-documents?limit=${limit}`),
+  summary: (selection?: number | 'ALL') =>
+    apiClient.get<DashboardSummary>(withYear('/dashboard/summary', selection)),
+  charts: (range: 'FY' | '12M', selection?: number | 'ALL') =>
+    apiClient.get<DashboardCharts>(withYear(`/dashboard/charts?range=${range}`, selection)),
+  recent: (limit = 8, selection?: number | 'ALL') =>
+    apiClient.get<RecentDocument[]>(
+      withYear(`/dashboard/recent-documents?limit=${limit}`, selection),
+    ),
   search: (query: string) => apiClient.get<SearchResults>(`/search?q=${encodeURIComponent(query)}`),
 };
 
@@ -36,8 +47,11 @@ export const downloadsApi = {
 
 export const dashboardKeys = {
   all: ['dashboard'] as const,
-  summary: () => [...dashboardKeys.all, 'summary'] as const,
-  charts: (range: string) => [...dashboardKeys.all, 'charts', range] as const,
-  recent: (limit: number) => [...dashboardKeys.all, 'recent', limit] as const,
+  summary: (selection?: number | 'ALL') =>
+    [...dashboardKeys.all, 'summary', selection ?? 'default'] as const,
+  charts: (range: string, selection?: number | 'ALL') =>
+    [...dashboardKeys.all, 'charts', range, selection ?? 'default'] as const,
+  recent: (limit: number, selection?: number | 'ALL') =>
+    [...dashboardKeys.all, 'recent', limit, selection ?? 'default'] as const,
   search: (query: string) => ['search', query] as const,
 };

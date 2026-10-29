@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { buildUser, mockApi, renderAt } from '@/test/harness';
+import { buildUser, FINANCIAL_YEARS, mockApi, renderAt } from '@/test/harness';
+import * as apiClientModule from '@/services/api-client';
 
 /**
  * Quotation module tests.
@@ -169,5 +170,24 @@ describe('the editor totals', () => {
 
     expect(screen.getByLabelText(/valid until/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/due date/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('the quotation list financial-year scope', () => {
+  it('passes the selected year to the server rather than filtering in the browser', async () => {
+    mockApi(buildUser('ADMIN'), {
+      ...withQuotations(),
+      get: { '/masters/financial-years': FINANCIAL_YEARS },
+    });
+    renderAt('/quotations');
+
+    await screen.findByText('QT001/2026-2027');
+
+    await waitFor(() =>
+      expect(apiClientModule.apiClient.getPaginated).toHaveBeenCalledWith(
+        '/quotations',
+        expect.objectContaining({ financialYearId: 2 }),
+      ),
+    );
   });
 });

@@ -105,7 +105,6 @@ const envSchema = z.object({
   ATTACHMENT_MAX_MB: z.coerce.number().int().min(1).default(10),
 
   /* pdf */
-  PDF_ENGINE: z.enum(['puppeteer', 'playwright']).default('puppeteer'),
   PUPPETEER_EXECUTABLE_PATH: z.string().optional(),
   PDF_CONCURRENCY: z.coerce.number().int().min(1).max(8).default(2),
   PDF_TIMEOUT_MS: z.coerce.number().int().min(1000).default(30000),
@@ -120,11 +119,8 @@ const envSchema = z.object({
   SMTP_FROM: z.string().default('Company Billing <billing@example.com>'),
   MAIL_BCC_ARCHIVE: z.string().optional(),
 
-  /* sharing / feature flags */
+  /* sharing */
   SHARE_LINK_TTL_DAYS: z.coerce.number().int().min(1).default(30),
-  FEATURE_WHATSAPP: booleanish.default(false),
-  FEATURE_PAYMENTS: booleanish.default(false),
-  FEATURE_MANUAL_PAYMENTS: booleanish.default(true),
 
   /* ops */
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),

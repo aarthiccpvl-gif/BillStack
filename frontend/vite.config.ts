@@ -31,7 +31,10 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    /* Production source maps would publish the entire frontend source. The
+       server-side error log is the place to diagnose a problem, not a browser
+       devtools download. */
+    sourcemap: false,
     chunkSizeWarningLimit: 900,
   },
   test: {

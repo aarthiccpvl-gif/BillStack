@@ -14,6 +14,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/states';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/app/AuthProvider';
+import { useFinancialYear } from '@/app/FinancialYearProvider';
 import { ApiError } from '@/services/api-client';
 import { reportKeys, reportsApi, type ReportParams } from '@/services/reports-api';
 import { useCustomerOptions } from '@/hooks/useLookups';
@@ -43,6 +44,7 @@ const TABS: { kind: ReportKind; label: string; blurb: string }[] = [
 export const ReportsPage = () => {
   const toast = useToast();
   const { hasPermission } = useAuth();
+  const { financialYearId, label: yearLabel, isLoading: yearsLoading } = useFinancialYear();
   const { data: customers } = useCustomerOptions();
   const { data: currencies } = useCurrencies(true);
 
@@ -87,6 +89,7 @@ export const ReportsPage = () => {
   const [exporting, setExporting] = useState<string | null>(null);
 
   const params: ReportParams = {
+    ...(financialYearId ? { financialYearId } : {}),
     ...(dateFrom ? { dateFrom } : {}),
     ...(dateTo ? { dateTo } : {}),
     ...(customerId ? { customerId: Number(customerId) } : {}),
@@ -99,6 +102,7 @@ export const ReportsPage = () => {
   const query = useQuery({
     queryKey: reportKeys.report(kind, params),
     queryFn: () => reportsApi.run(kind, params),
+    enabled: !yearsLoading,
   });
 
   const report = query.data;
@@ -136,7 +140,7 @@ export const ReportsPage = () => {
     <>
       <PageHeader
         title="Reports"
-        description="Filter the book, read it here, take it away in whichever format the next person needs."
+        description={`Filter the book, read it here, take it away in whichever format the next person needs. · ${yearLabel}`}
         breadcrumbs={[{ label: 'Reports' }]}
         actions={
           canExport ? (

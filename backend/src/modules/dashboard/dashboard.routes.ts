@@ -16,26 +16,39 @@ import { search } from './search.service';
  */
 export const dashboardRouter = Router();
 
+/** `financialYearId=all` is explicit; omitting it keeps the current year. */
+const financialYearSelectionSchema = z.object({
+  financialYearId: z.union([z.literal('all'), z.coerce.number().int().positive()]).optional(),
+});
+
+const selectionOf = (query: { financialYearId?: 'all' | number }) =>
+  query.financialYearId === 'all' ? ('ALL' as const) : query.financialYearId;
+
 dashboardRouter.get(
   '/summary',
   requirePermission(PERMISSIONS.DASHBOARD_READ),
+  validateQuery(financialYearSelectionSchema),
   asyncHandler(async (_req: Request, res: Response) => {
-    sendSuccess(res, await service.getSummary());
+    const query = parsedQuery(res, financialYearSelectionSchema);
+    sendSuccess(res, await service.getSummary(selectionOf(query)));
   }),
 );
 
-const chartQuerySchema = z.object({ range: z.enum(['FY', '12M']).default('FY') });
+const chartQuerySchema = financialYearSelectionSchema.extend({
+  range: z.enum(['FY', '12M']).default('FY'),
+});
 
 dashboardRouter.get(
   '/charts',
   requirePermission(PERMISSIONS.DASHBOARD_READ),
   validateQuery(chartQuerySchema),
   asyncHandler(async (_req: Request, res: Response) => {
-    sendSuccess(res, await service.getCharts(parsedQuery(res, chartQuerySchema).range));
+    const query = parsedQuery(res, chartQuerySchema);
+    sendSuccess(res, await service.getCharts(query.range, selectionOf(query)));
   }),
 );
 
-const recentQuerySchema = z.object({
+const recentQuerySchema = financialYearSelectionSchema.extend({
   limit: z.coerce.number().int().min(1).max(25).default(8),
 });
 
@@ -44,7 +57,8 @@ dashboardRouter.get(
   requirePermission(PERMISSIONS.DASHBOARD_READ),
   validateQuery(recentQuerySchema),
   asyncHandler(async (_req: Request, res: Response) => {
-    sendSuccess(res, await service.getRecentDocuments(parsedQuery(res, recentQuerySchema).limit));
+    const query = parsedQuery(res, recentQuerySchema);
+    sendSuccess(res, await service.getRecentDocuments(query.limit, selectionOf(query)));
   }),
 );
 

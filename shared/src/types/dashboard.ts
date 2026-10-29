@@ -21,8 +21,24 @@ export interface CurrencyTotals {
   invoiceOutstanding: string;
 }
 
+/**
+ * The period a dashboard figure covers.
+ *
+ * `ALL` is an explicit statement, not an absent filter: a user looking at an old
+ * document must be able to tell whether it is excluded by a financial year or
+ * simply not there. The date bounds are null for `ALL`.
+ */
+export interface DashboardPeriod {
+  scope: 'FY' | 'ALL';
+  financialYearId: number | null;
+  code: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  label: string;
+}
+
 export interface DashboardSummary {
-  financialYear: { id: number; code: string; startDate: string; endDate: string };
+  period: DashboardPeriod;
   baseCurrencyCode: string;
   baseCurrencySymbol: string;
   baseCurrencyDecimalPlaces: number;

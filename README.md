@@ -146,20 +146,22 @@ production will render.
 
 ## Documentation
 
-| Doc                                                                        | Contents                                         |
-| -------------------------------------------------------------------------- | ------------------------------------------------ |
-| [docs/00-architecture-overview.md](docs/00-architecture-overview.md)       | layers, stack, repo layout, env, Docker, testing |
-| [docs/01-data-model-erd.md](docs/01-data-model-erd.md)                     | ER diagram and entity catalogue                  |
-| [docs/02-prisma-schema-design.md](docs/02-prisma-schema-design.md)         | full schema design and seed plan                 |
-| [docs/03-financial-tax-engine.md](docs/03-financial-tax-engine.md)         | decimal policy, calculation order, GST           |
-| [docs/04-numbering-financial-year.md](docs/04-numbering-financial-year.md) | financial years and document numbering           |
-| [docs/05-api-specification.md](docs/05-api-specification.md)               | endpoints, conventions, error codes              |
-| [docs/06-auth-rbac-audit-revision.md](docs/06-auth-rbac-audit-revision.md) | auth, permissions, audit, revisions              |
-| [docs/07-template-pdf-engine.md](docs/07-template-pdf-engine.md)           | template engine and PDF pipeline                 |
-| [docs/08-frontend-architecture.md](docs/08-frontend-architecture.md)       | modules, routes, state, editor                   |
-| [docs/09-roadmap.md](docs/09-roadmap.md)                                   | phase plan with exit criteria                    |
-| [docs/10-open-questions.md](docs/10-open-questions.md)                     | contradictions, gaps and the questions raised    |
-| [docs/11-decisions.md](docs/11-decisions.md)                               | **decision log** — the answers and their effects |
+| Doc                                                                        | Contents                                                         |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| [docs/00-architecture-overview.md](docs/00-architecture-overview.md)       | layers, stack, repo layout, env, Docker, testing                 |
+| [docs/01-data-model-erd.md](docs/01-data-model-erd.md)                     | ER diagram and entity catalogue                                  |
+| [docs/02-prisma-schema-design.md](docs/02-prisma-schema-design.md)         | full schema design and seed plan                                 |
+| [docs/03-financial-tax-engine.md](docs/03-financial-tax-engine.md)         | decimal policy, calculation order, GST                           |
+| [docs/04-numbering-financial-year.md](docs/04-numbering-financial-year.md) | financial years and document numbering                           |
+| [docs/05-api-specification.md](docs/05-api-specification.md)               | endpoints, conventions, error codes                              |
+| [docs/06-auth-rbac-audit-revision.md](docs/06-auth-rbac-audit-revision.md) | auth, permissions, audit, revisions                              |
+| [docs/07-template-pdf-engine.md](docs/07-template-pdf-engine.md)           | template engine and PDF pipeline                                 |
+| [docs/08-frontend-architecture.md](docs/08-frontend-architecture.md)       | modules, routes, state, editor                                   |
+| [docs/09-roadmap.md](docs/09-roadmap.md)                                   | phase plan with exit criteria                                    |
+| [docs/10-open-questions.md](docs/10-open-questions.md)                     | contradictions, gaps and the questions raised                    |
+| [docs/11-decisions.md](docs/11-decisions.md)                               | **decision log** — the answers and their effects                 |
+| [docs/12-pending-work-plan.md](docs/12-pending-work-plan.md)               | **pending work** — Phase 9, production readiness and known gaps  |
+| [docs/13-operations.md](docs/13-operations.md)                             | **operations** — deploy, migrate, seed, backup, restore, upgrade |
 
 ## Not in scope
 

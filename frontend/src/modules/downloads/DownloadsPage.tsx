@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Archive, FileDown, Search } from 'lucide-react';
 import {
@@ -14,6 +14,7 @@ import { Pagination } from '@/components/Pagination';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/states';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/app/AuthProvider';
+import { useFinancialYear } from '@/app/FinancialYearProvider';
 import { ApiError } from '@/services/api-client';
 import { downloadsApi } from '@/services/dashboard-api';
 import { quotationKeys, quotationsApi } from '@/services/quotations-api';
@@ -56,6 +57,7 @@ interface Row {
 export const DownloadsPage = () => {
   const toast = useToast();
   const { hasPermission } = useAuth();
+  const { financialYearId, label: yearLabel, isLoading: yearsLoading } = useFinancialYear();
   const { data: customers } = useCustomerOptions();
 
   const [type, setType] = useState<DocType>('INVOICE');
@@ -76,6 +78,7 @@ export const DownloadsPage = () => {
     page,
     pageSize: PAGE_SIZE,
     sort: '-documentDate',
+    ...(financialYearId ? { financialYearId } : {}),
     ...(search ? { search } : {}),
     ...(status ? { status } : {}),
     ...(customerId ? { customerId: Number(customerId) } : {}),
@@ -89,11 +92,19 @@ export const DownloadsPage = () => {
       type === 'INVOICE'
         ? invoicesApi.list(params).then((page) => ({ ...page, items: page.items as Row[] }))
         : quotationsApi.list(params).then((page) => ({ ...page, items: page.items as Row[] })),
+    enabled: !yearsLoading,
   });
 
   const rows = query.data?.items ?? [];
   const pageIds = rows.map((row) => row.id);
   const allOnPageSelected = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
+
+  /* Changing the global year changes the set: a page number and a tick list from
+     the previous one are both meaningless. */
+  useEffect(() => {
+    setPage(1);
+    setSelected(new Set());
+  }, [financialYearId]);
 
   const reset = (next: DocType) => {
     setType(next);
@@ -142,7 +153,7 @@ export const DownloadsPage = () => {
     <>
       <PageHeader
         title="Downloads"
-        description="Filter a set of documents and take them away as one archive."
+        description={`Filter a set of documents and take them away as one archive. · ${yearLabel}`}
         breadcrumbs={[{ label: 'Downloads' }]}
         actions={
           canBulk ? (

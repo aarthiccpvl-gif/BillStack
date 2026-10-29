@@ -1,6 +1,7 @@
 import type {
   ConvertQuotationInput,
   CreateQuotationInput,
+  DocumentAttachmentRecord,
   DocumentRevisionRecord,
   InvoiceRecord,
   QuotationListRow,
@@ -43,6 +44,39 @@ export const quotationsApi = {
 
   history: (id: string) => apiClient.get<DocumentRevisionRecord[]>(`/quotations/${id}/history`),
 
+  attachments: (id: string) =>
+    apiClient.get<DocumentAttachmentRecord[]>(`/quotations/${id}/attachments`),
+  uploadAttachment: (id: string, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    /* Let the browser set the multipart boundary — overriding Content-Type breaks it. */
+    return apiClient.post<DocumentAttachmentRecord>(`/quotations/${id}/attachments`, form, {
+      headers: { 'Content-Type': undefined },
+    });
+  },
+  deleteAttachment: (id: string, fileId: string) =>
+    apiClient.delete<{ removed: boolean }>(`/quotations/${id}/attachments/${fileId}`),
+  downloadAttachment: async (
+    id: string,
+    fileId: string,
+  ): Promise<{ blob: Blob; fileName: string | null }> => {
+    const response = await http.get<Blob>(`/quotations/${id}/attachments/${fileId}`, {
+      responseType: 'blob',
+    });
+    const disposition = String(response.headers['content-disposition'] ?? '');
+    const match = /filename="?([^"]+)"?/.exec(disposition);
+    const encoded = match?.[1];
+    let fileName: string | null = encoded ?? null;
+    if (encoded) {
+      try {
+        fileName = decodeURIComponent(encoded);
+      } catch {
+        fileName = encoded;
+      }
+    }
+    return { blob: response.data, fileName };
+  },
+
   shareLinks: (id: string) => apiClient.get<ShareLinkRecord[]>(`/quotations/${id}/share-links`),
   createShareLink: (id: string, expiresInDays?: number) =>
     apiClient.post<ShareLinkRecord>(`/quotations/${id}/share-links`, { expiresInDays }),
@@ -83,5 +117,6 @@ export const quotationKeys = {
   list: (params: QuotationListParams) => [...quotationKeys.all, 'list', params] as const,
   detail: (id: string) => [...quotationKeys.all, 'detail', id] as const,
   history: (id: string) => [...quotationKeys.all, 'history', id] as const,
+  attachments: (id: string) => [...quotationKeys.all, 'attachments', id] as const,
   shares: (id: string) => [...quotationKeys.all, 'shares', id] as const,
 };

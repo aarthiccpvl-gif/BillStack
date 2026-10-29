@@ -62,6 +62,8 @@ const ACTION_PHRASES: Partial<Record<AuditAction, string>> = {
   SHARE_REVOKED: 'revoked a share link for',
   REPORT_EXPORTED: 'exported report',
   BULK_DOWNLOAD: 'bulk-downloaded documents of type',
+  ATTACHMENT_ADDED: 'attached a file to',
+  ATTACHMENT_REMOVED: 'removed an attachment from',
 };
 
 const asRecord = (value: Prisma.JsonValue | null): Record<string, unknown> | null =>

@@ -9,6 +9,7 @@ import { prisma } from '../../db/prisma';
 import { BusinessRuleError } from '../../utils/errors';
 import { recordAudit } from '../../services/audit.service';
 import { allocateNumber } from '../../services/numbering.service';
+import { stageAttachmentCopies, writeAttachmentCopies } from '../documents/attachments.service';
 import { prepareDocument } from '../documents/prepare.service';
 import { findQuotation } from '../quotations/quotations.service';
 import { invoiceInclude } from './document-data';
@@ -104,85 +105,110 @@ export const convertQuotationToInvoice = async (
     })),
   };
 
-  const invoiceId = await prisma.$transaction(async (tx) => {
-    const prepared = await prepareDocument(tx, 'INVOICE', payload);
+  /* Supporting documents travel with the work they support (decision D7). The
+     bytes are staged before the transaction; the rows are written inside it. */
+  const attachments = await stageAttachmentCopies('QUOTATION', quotationId);
 
-    /* Both addresses are copied as the quotation recorded them, not re-derived
-       from the customer, so a customer who has since moved does not silently
-       change the address on a document that was already agreed. */
-    const header = {
-      ...prepared.header,
-      billingAddressSnapshot: (quotation.billingAddressSnapshot ??
-        Prisma.JsonNull) as Prisma.InputJsonValue,
-      shippingAddressSnapshot: (quotation.shippingAddressSnapshot ??
-        Prisma.JsonNull) as Prisma.InputJsonValue,
-    };
+  let invoiceId: bigint;
+  try {
+    invoiceId = await prisma.$transaction(async (tx) => {
+      const prepared = await prepareDocument(tx, 'INVOICE', payload);
 
-    const allocated = await allocateNumber(tx, 'INVOICE', documentDate);
-    const dueDate = input.dueDate
-      ? toDate(input.dueDate)
-      : addDays(toDate(documentDate), paymentTermsDays);
+      /* Both addresses are copied as the quotation recorded them, not re-derived
+         from the customer, so a customer who has since moved does not silently
+         change the address on a document that was already agreed. */
+      const header = {
+        ...prepared.header,
+        billingAddressSnapshot: (quotation.billingAddressSnapshot ??
+          Prisma.JsonNull) as Prisma.InputJsonValue,
+        shippingAddressSnapshot: (quotation.shippingAddressSnapshot ??
+          Prisma.JsonNull) as Prisma.InputJsonValue,
+      };
 
-    const invoice = await tx.invoice.create({
-      data: {
-        ...header,
-        number: allocated.number,
-        financialYearId: allocated.financialYearId,
-        quotationId,
-        paymentTermsDays,
-        dueDate,
-        createdById: actorId,
-      },
-    });
+      const allocated = await allocateNumber(tx, 'INVOICE', documentDate);
+      const dueDate = input.dueDate
+        ? toDate(input.dueDate)
+        : addDays(toDate(documentDate), paymentTermsDays);
 
-    await writeInvoiceLines(tx, invoice.id, prepared.items);
-
-    /* The quotation is closed against further change and points at its invoice. */
-    await tx.quotation.update({
-      where: { id: quotationId },
-      data: { status: 'CONVERTED', updatedById: actorId },
-    });
-
-    if (!invoice.grandTotal.equals(quotation.grandTotal)) {
-      /* The engine re-ran and disagreed with the accepted figure — almost always
-         a tax rate that has since changed its effective date. Better to refuse
-         than to invoice a number the customer never agreed to. */
-      throw new BusinessRuleError(
-        `Converting ${quotation.number} would produce ${invoice.grandTotal.toString()} instead of the accepted ${quotation.grandTotal.toString()}, usually because a tax rate changed. Raise the invoice manually and record why.`,
-        'CONVERSION_TOTAL_MISMATCH',
-      );
-    }
-
-    await recordAudit(
-      {
-        action: 'QUOTATION_CONVERTED',
-        entityType: 'QUOTATION',
-        entityId: quotationId,
-        entityLabel: quotation.number,
-        previousData: { status: quotation.status },
-        newData: { status: 'CONVERTED', invoice: invoice.number },
-        metadata: { invoiceId: invoice.id.toString(), grandTotal: invoice.grandTotal.toString() },
-      },
-      tx,
-    );
-
-    await recordAudit(
-      {
-        action: 'INVOICE_CREATED',
-        entityType: 'INVOICE',
-        entityId: invoice.id,
-        entityLabel: invoice.number,
-        newData: {
-          fromQuotation: quotation.number,
-          grandTotal: invoice.grandTotal.toString(),
-          lines: payload.items.length,
+      const invoice = await tx.invoice.create({
+        data: {
+          ...header,
+          number: allocated.number,
+          financialYearId: allocated.financialYearId,
+          quotationId,
+          paymentTermsDays,
+          dueDate,
+          createdById: actorId,
         },
-      },
-      tx,
-    );
+      });
 
-    return invoice.id;
-  });
+      await writeInvoiceLines(tx, invoice.id, prepared.items);
+
+      const attachmentsCopied = await writeAttachmentCopies(
+        tx,
+        'INVOICE',
+        invoice.id,
+        attachments.copies,
+        actorId,
+      );
+
+      /* The quotation is closed against further change and points at its invoice. */
+      await tx.quotation.update({
+        where: { id: quotationId },
+        data: { status: 'CONVERTED', updatedById: actorId },
+      });
+
+      if (!invoice.grandTotal.equals(quotation.grandTotal)) {
+        /* The engine re-ran and disagreed with the accepted figure — almost always
+           a tax rate that has since changed its effective date. Better to refuse
+           than to invoice a number the customer never agreed to. */
+        throw new BusinessRuleError(
+          `Converting ${quotation.number} would produce ${invoice.grandTotal.toString()} instead of the accepted ${quotation.grandTotal.toString()}, usually because a tax rate changed. Raise the invoice manually and record why.`,
+          'CONVERSION_TOTAL_MISMATCH',
+        );
+      }
+
+      await recordAudit(
+        {
+          action: 'QUOTATION_CONVERTED',
+          entityType: 'QUOTATION',
+          entityId: quotationId,
+          entityLabel: quotation.number,
+          previousData: { status: quotation.status },
+          newData: { status: 'CONVERTED', invoice: invoice.number },
+          metadata: {
+            invoiceId: invoice.id.toString(),
+            grandTotal: invoice.grandTotal.toString(),
+            attachmentsCopied,
+          },
+        },
+        tx,
+      );
+
+      await recordAudit(
+        {
+          action: 'INVOICE_CREATED',
+          entityType: 'INVOICE',
+          entityId: invoice.id,
+          entityLabel: invoice.number,
+          newData: {
+            fromQuotation: quotation.number,
+            grandTotal: invoice.grandTotal.toString(),
+            lines: payload.items.length,
+            attachmentsCopied,
+          },
+        },
+        tx,
+      );
+
+      return invoice.id;
+    });
+  } catch (error) {
+    /* The invoice did not commit, so the copied bytes have nothing pointing at
+       them. Remove them before surfacing the failure. */
+    await attachments.cleanup();
+    throw error;
+  }
 
   const invoice = await prisma.invoice.findUniqueOrThrow({
     where: { id: invoiceId },

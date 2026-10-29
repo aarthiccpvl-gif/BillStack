@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { CircleUserRound, KeyRound, LogOut, UserRound } from 'lucide-react';
+import { CalendarRange, CircleUserRound, KeyRound, LogOut, UserRound } from 'lucide-react';
 import { ApiStatus } from '@/components/ApiStatus';
 import { GlobalSearch } from '@/components/GlobalSearch';
 import { useAuth } from '@/app/AuthProvider';
+import { useFinancialYear } from '@/app/FinancialYearProvider';
 
 /** Global search, environment status and the account menu. */
 export const Topbar = () => {
   const { user, logout } = useAuth();
+  const { years, selection, setSelection, isLoading } = useFinancialYear();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -22,6 +24,31 @@ export const Topbar = () => {
       <GlobalSearch />
 
       <div className="app-topbar__spacer" />
+
+      {user && (
+        <label className="d-flex align-items-center gap-2 mb-0">
+          <CalendarRange size={16} className="text-secondary" aria-hidden />
+          <span className="visually-hidden">Financial year</span>
+          <select
+            className="form-select form-select-sm"
+            style={{ width: 'auto', maxWidth: '14rem' }}
+            aria-label="Financial year"
+            value={selection === 'ALL' ? 'ALL' : String(selection)}
+            disabled={isLoading}
+            onChange={(event) =>
+              setSelection(event.target.value === 'ALL' ? 'ALL' : Number(event.target.value))
+            }
+          >
+            {years.map((year) => (
+              <option key={year.id} value={year.id}>
+                {year.code}
+                {year.isCurrent ? ' (current)' : ''}
+              </option>
+            ))}
+            <option value="ALL">All financial years</option>
+          </select>
+        </label>
+      )}
 
       <ApiStatus />
 

@@ -1,0 +1,18 @@
+# Keep the repository LF everywhere. Windows checkouts otherwise turn every
+# file into a CRLF diff and make `npm run format:check` fail against Prettier's
+# `endOfLine: "lf"`.
+* text=auto eol=lf
+
+# Binary assets must never be normalised.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.pdf binary
+*.zip binary

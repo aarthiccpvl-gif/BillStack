@@ -26,6 +26,7 @@ import { requirePermission } from '../../middleware/authorize';
 import { recordAudit } from '../../services/audit.service';
 import { createShareLink, listShareLinks, revokeShareLink } from '../../services/share.service';
 import { getStorage } from '../../storage/storage.service';
+import { registerAttachmentRoutes } from '../documents/attachments.routes';
 import * as service from './invoices.service';
 import * as lifecycle from './invoices.lifecycle';
 
@@ -57,6 +58,13 @@ invoicesRouter.post(
 
 const idParam = documentIdParamSchema;
 const idOf = (res: Response): bigint => BigInt(parsedParams(res, idParam).id);
+
+registerAttachmentRoutes(invoicesRouter, {
+  entityType: 'INVOICE',
+  readPermission: PERMISSIONS.INVOICE_READ,
+  writePermission: PERMISSIONS.INVOICE_UPDATE,
+  findDocument: (id) => service.findInvoice(id),
+});
 
 invoicesRouter.get(
   '/:id',

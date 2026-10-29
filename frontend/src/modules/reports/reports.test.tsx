@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { buildUser, mockApi, renderAt } from '@/test/harness';
+import { buildUser, FINANCIAL_YEARS, mockApi, renderAt } from '@/test/harness';
 import * as apiClientModule from '@/services/api-client';
 
 /**
@@ -97,6 +97,41 @@ describe('an export asks for what the screen is showing', () => {
     await user.click(screen.getByRole('button', { name: /^PDF$/ }));
     await waitFor(() => expect(request).toHaveBeenCalled());
     expect(String(request.mock.calls[0]?.[0])).toContain('format=pdf');
+  });
+
+  it('scopes both the screen and the export to the global financial year', async () => {
+    const user = userEvent.setup();
+    mockApi(buildUser('ADMIN'), {
+      get: { '/masters/financial-years': FINANCIAL_YEARS },
+    });
+
+    const request = vi.spyOn(apiClientModule.http, 'get').mockResolvedValue({
+      data: new Blob(['number,customer\r\n']),
+      headers: { 'content-disposition': 'attachment; filename="invoices-2026-08-26.csv"' },
+    } as never);
+
+    renderAt('/reports');
+    await screen.findByText('FT001/2026-2027');
+
+    const requested = () =>
+      (apiClientModule.apiClient.get as unknown as { mock: { calls: [string][] } }).mock.calls.map(
+        ([url]) => url,
+      );
+
+    /* The screen's own report query carries the year first. */
+    await waitFor(() =>
+      expect(
+        requested().some(
+          (url) => url.startsWith('/reports/invoices') && url.includes('financialYearId=2'),
+        ),
+      ).toBe(true),
+    );
+
+    await user.click(screen.getByRole('button', { name: /^CSV$/ }));
+    await waitFor(() => expect(request).toHaveBeenCalled());
+
+    /* The export is the same query in another container, so it carries the year too. */
+    expect(String(request.mock.calls[0]?.[0])).toContain('financialYearId=2');
   });
 
   it('is not offered to a role without the export permission', async () => {
